@@ -41,12 +41,13 @@ import {
 
 // ─── REPLACE THIS WITH YOUR FIREBASE CONFIG ──────────────────────────────────
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyAfAwBXoalxdTzwohpjB-v65G-BPJjifFE",
+  authDomain: "daily-bible-reading-log.firebaseapp.com",
+  projectId: "daily-bible-reading-log",
+  storageBucket: "daily-bible-reading-log.firebasestorage.app",
+  messagingSenderId: "500677527816",
+  appId: "1:500677527816:web:66b7c121c51f0f8c38c4bd",
+  measurementId: "G-8JMD13G96Y"
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
