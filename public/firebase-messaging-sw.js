@@ -7,8 +7,7 @@ firebase.initializeApp({
   projectId: "daily-bible-reading-log",
   storageBucket: "daily-bible-reading-log.firebasestorage.app",
   messagingSenderId: "500677527816",
-  appId: "1:500677527816:web:66b7c121c51f0f8c38c4bd",
-  measurementId: "G-8JMD13G96Y"
+  appId: "1:500677527816:web:66b7c121c51f0f8c38c4bd"
 });
 
 const messaging = firebase.messaging();

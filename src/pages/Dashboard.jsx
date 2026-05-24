@@ -1,29 +1,32 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ProgressRing, ProgressBar, Card, Divider, Button, Badge, Avatar } from "../components/UI.jsx";
 import {
   overallPct, hebrewPct, greekPct, countReadChapters,
-  getCurrentStreak, getRecentActivity, formatDate, getSevenDayPace,
+  getCurrentStreak, calculateLongestStreak, getRecentActivity,
+  formatDate, getSevenDayPace,
 } from "../utils/progress.js";
-import { countChaptersThisWeek } from "../utils/goals.js";
+import { countChaptersThisWeek, getLongestStreak, updateLongestStreak } from "../utils/goals.js";
 import { TOTAL_CHAPTERS, HEBREW_CHAPTERS, GREEK_CHAPTERS, BOOK_MAP } from "../data/bibleData.js";
 
-function StreakCard({ streak, pace }) {
+function StreakCard({ streak, longestStreak, pace }) {
   return (
     <Card style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", gap: 0 }}>
-        {/* Streak */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0" }}>
-          <div style={{ fontSize: 48, fontWeight: 800, color: streak > 0 ? "var(--accent)" : "var(--text-muted)", lineHeight: 1, letterSpacing: "-2px" }}>
+      <div style={{ display: "flex" }}>
+        {/* Current streak */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0" }}>
+          <div style={{ fontSize: 52, fontWeight: 800, color: streak > 0 ? "var(--accent)" : "var(--text-muted)", lineHeight: 1, letterSpacing: "-2px" }}>
             {streak}
           </div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
-            Day Streak
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
+            Day Streak {streak > 0 ? "🔥" : ""}
           </div>
-          {streak > 0 && (
-            <div style={{ fontSize: 20, marginTop: 4 }}>🔥</div>
+          {longestStreak > 0 && (
+            <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 3 }}>
+              Best: <span style={{ color: "var(--accent-light)", fontWeight: 700 }}>{longestStreak}</span> days
+            </div>
           )}
           {streak === 0 && (
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontStyle: "italic", textAlign: "center" }}>
+            <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4, fontStyle: "italic", textAlign: "center", padding: "0 8px" }}>
               Read today to start your streak!
             </div>
           )}
@@ -33,14 +36,14 @@ function StreakCard({ streak, pace }) {
         <div style={{ width: 1, background: "var(--border)", margin: "8px 0" }} />
 
         {/* 7-day pace */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0" }}>
-          <div style={{ fontSize: 48, fontWeight: 800, color: pace > 0 ? "var(--accent)" : "var(--text-muted)", lineHeight: 1, letterSpacing: "-2px" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0" }}>
+          <div style={{ fontSize: 52, fontWeight: 800, color: pace > 0 ? "var(--accent)" : "var(--text-muted)", lineHeight: 1, letterSpacing: "-2px" }}>
             {pace}
           </div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, textAlign: "center" }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, textAlign: "center" }}>
             Ch/Day
           </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontStyle: "italic" }}>
+          <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 3 }}>
             last 7 days
           </div>
         </div>
@@ -53,6 +56,10 @@ function PaceCalculator({ progress, totalRead }) {
   const remaining = TOTAL_CHAPTERS - totalRead;
   const actualPace = useMemo(() => getSevenDayPace(progress), [progress]);
   const [chapPerDay, setChapPerDay] = useState(actualPace || 1);
+
+  useEffect(() => {
+    if (actualPace > 0) setChapPerDay(actualPace);
+  }, [actualPace]);
 
   const finishDate = useMemo(() => {
     if (!chapPerDay || chapPerDay <= 0) return null;
@@ -67,8 +74,7 @@ function PaceCalculator({ progress, totalRead }) {
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={{ fontSize: 13, color: "var(--text-muted)" }}>If I read</span>
         <input
-          type="number" min="1" max="100"
-          value={chapPerDay}
+          type="number" min="1" max="100" value={chapPerDay}
           onChange={(e) => setChapPerDay(parseFloat(e.target.value) || 1)}
           style={{
             width: 52, background: "var(--bg)", border: "1px solid var(--accent)",
@@ -107,9 +113,7 @@ function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
   if (!weeklyGoal && !editing) {
     return (
       <Card style={{ textAlign: "center", padding: "14px" }}>
-        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 10 }}>
-          Set a weekly reading goal
-        </div>
+        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 10 }}>Set a weekly reading goal</div>
         <Button onClick={() => setEditing(true)} small>Set Goal</Button>
       </Card>
     );
@@ -118,9 +122,7 @@ function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
   if (editing) {
     return (
       <Card>
-        <div style={{ fontSize: 13, color: "var(--text)", marginBottom: 10, fontWeight: 500 }}>
-          Chapters per week?
-        </div>
+        <div style={{ fontSize: 13, color: "var(--text)", marginBottom: 10, fontWeight: 500 }}>Chapters per week?</div>
         <div style={{ display: "flex", gap: 8 }}>
           <input type="number" min="1" max="100" value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -138,7 +140,7 @@ function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
   return (
     <Card>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>This Week</div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700 }}>This Week</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 13, color: pct >= 100 ? "var(--green)" : "var(--text)", fontWeight: 600 }}>
             {thisWeek} / {weeklyGoal} ch
@@ -173,6 +175,18 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
   const streak = useMemo(() => getCurrentStreak(progress), [progress]);
   const pace = useMemo(() => getSevenDayPace(progress), [progress]);
   const recent = useMemo(() => getRecentActivity(progress, 3), [progress]);
+  const [longestStreak, setLongestStreak] = useState(0);
+
+  // Load and update longest streak from Firebase
+  useEffect(() => {
+    if (!profile?.uid) return;
+    const load = async () => {
+      const calculated = calculateLongestStreak(progress);
+      const stored = await updateLongestStreak(profile.uid, Math.max(calculated, streak));
+      setLongestStreak(stored);
+    };
+    load();
+  }, [profile?.uid, streak, progress]);
 
   const hebrewRead = Math.round((hebrew / 100) * HEBREW_CHAPTERS);
   const greekRead = Math.round((greek / 100) * GREEK_CHAPTERS);
@@ -198,7 +212,7 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
       </div>
 
       {/* STREAK & PACE — most prominent */}
-      <StreakCard streak={streak} pace={pace} />
+      <StreakCard streak={streak} longestStreak={longestStreak} pace={pace} />
 
       {/* Weekly goal */}
       <WeeklyGoalCard progress={progress} weeklyGoal={profile?.weeklyGoal} onSetGoal={handleSetGoal} />
@@ -210,10 +224,8 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
 
       {/* Bible progress rings */}
       <Card style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 18, paddingBottom: 14 }}>
-        <ProgressRing
-          pct={overall} size={100} stroke={9} color="var(--accent)"
-          label="Full Bible" sub={`${(TOTAL_CHAPTERS - totalRead).toLocaleString()} chapters remaining`}
-        />
+        <ProgressRing pct={overall} size={100} stroke={9} color="var(--accent)"
+          label="Full Bible" sub={`${(TOTAL_CHAPTERS - totalRead).toLocaleString()} chapters remaining`} />
         <PaceCalculator progress={progress} totalRead={totalRead} />
       </Card>
 

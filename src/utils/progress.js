@@ -18,22 +18,13 @@ export function pctForBook(progress, book) {
 }
 
 export function pctForSection(progress, section) {
-  const books = section.books;
-  const total = books.reduce((s, b) => s + b.chapters, 0);
-  const read = books.reduce((s, b) => s + countReadForBook(progress, b.id), 0);
-  return total > 0 ? Math.round((read / total) * 100) : 0;
-}
-
-export function pctForTestament(progress, testament) {
-  const sections = Object.values(testament.sections);
-  const total = sections.flatMap((s) => s.books).reduce((s, b) => s + b.chapters, 0);
-  const read = sections.flatMap((s) => s.books).reduce((s, b) => s + countReadForBook(progress, b.id), 0);
+  const total = section.books.reduce((s, b) => s + b.chapters, 0);
+  const read = section.books.reduce((s, b) => s + countReadForBook(progress, b.id), 0);
   return total > 0 ? Math.round((read / total) * 100) : 0;
 }
 
 export function overallPct(progress) {
-  const read = countReadChapters(progress);
-  return Math.round((read / TOTAL_CHAPTERS) * 100);
+  return Math.round((countReadChapters(progress) / TOTAL_CHAPTERS) * 100);
 }
 
 export function hebrewPct(progress) {
@@ -50,32 +41,6 @@ export function greekPct(progress) {
   return Math.round((read / GREEK_CHAPTERS) * 100);
 }
 
-export function estimateFinishDate(progress) {
-  // Find the earliest and latest read dates to compute pace
-  const allDates = [];
-  for (const bookProgress of Object.values(progress)) {
-    for (const dateStr of Object.values(bookProgress)) {
-      if (dateStr) allDates.push(new Date(dateStr));
-    }
-  }
-  if (allDates.length < 2) return null;
-
-  allDates.sort((a, b) => a - b);
-  const earliest = allDates[0];
-  const latest = allDates[allDates.length - 1];
-  const daysDiff = Math.max(1, (latest - earliest) / (1000 * 60 * 60 * 24));
-  const chaptersPerDay = allDates.length / daysDiff;
-
-  if (chaptersPerDay <= 0) return null;
-
-  const remaining = TOTAL_CHAPTERS - allDates.length;
-  const daysLeft = remaining / chaptersPerDay;
-  const finishDate = new Date();
-  finishDate.setDate(finishDate.getDate() + daysLeft);
-
-  return { finishDate, chaptersPerDay: Math.round(chaptersPerDay * 10) / 10 };
-}
-
 export function getCurrentStreak(progress) {
   const readDates = new Set();
   for (const bookProgress of Object.values(progress)) {
@@ -83,7 +48,6 @@ export function getCurrentStreak(progress) {
       if (dateStr) readDates.add(dateStr);
     }
   }
-
   let streak = 0;
   const today = new Date();
   for (let i = 0; i < 365; i++) {
@@ -97,6 +61,34 @@ export function getCurrentStreak(progress) {
     }
   }
   return streak;
+}
+
+export function calculateLongestStreak(progress) {
+  // Build sorted list of all unique read dates
+  const readDates = new Set();
+  for (const bookProgress of Object.values(progress)) {
+    for (const dateStr of Object.values(bookProgress)) {
+      if (dateStr) readDates.add(dateStr);
+    }
+  }
+  if (readDates.size === 0) return 0;
+
+  const sorted = Array.from(readDates).sort();
+  let longest = 1;
+  let current = 1;
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i - 1]);
+    const curr = new Date(sorted[i]);
+    const diffDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
+    if (diffDays === 1) {
+      current++;
+      longest = Math.max(longest, current);
+    } else {
+      current = 1;
+    }
+  }
+  return longest;
 }
 
 export function getRecentActivity(progress, limit = 10) {
@@ -116,10 +108,8 @@ export function formatDate(dateStr) {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-
   if (dateStr === today.toISOString().split("T")[0]) return "Today";
   if (dateStr === yesterday.toISOString().split("T")[0]) return "Yesterday";
-
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
@@ -133,18 +123,15 @@ export function pctForPsalmsBook(progress, subBook) {
   for (let ch = subBook.start; ch <= subBook.end; ch++) {
     if (chapters[ch]) read++;
   }
-  const total = subBook.end - subBook.start + 1;
-  return Math.round((read / total) * 100);
+  return Math.round((read / (subBook.end - subBook.start + 1)) * 100);
 }
 
-// 7-day rolling pace (chapters per day over last 7 days)
 export function getSevenDayPace(progress) {
   const today = new Date();
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 6);
   const fromStr = sevenDaysAgo.toISOString().split("T")[0];
   const toStr = today.toISOString().split("T")[0];
-
   let count = 0;
   for (const bookProgress of Object.values(progress)) {
     for (const dateStr of Object.values(bookProgress)) {

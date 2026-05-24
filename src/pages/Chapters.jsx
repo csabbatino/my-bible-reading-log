@@ -26,8 +26,11 @@ function BookInfoPanel({ bookId }) {
         </div>
         {introUrl && (
           <a href={introUrl} target="_blank" rel="noopener noreferrer"
-            style={{ fontSize: 11, color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>
-            Introduction ↗
+            style={{
+              fontSize: 12, color: "var(--accent)", fontWeight: 700,
+              textDecoration: "underline", textUnderlineOffset: 2,
+            }}>
+            Introduction to {book?.name} ↗
           </a>
         )}
       </div>

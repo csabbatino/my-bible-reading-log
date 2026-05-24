@@ -1,23 +1,7 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// firebase.js
-//
-// SETUP INSTRUCTIONS:
-// 1. Go to https://console.firebase.google.com
-// 2. Click "Add project" and name it (e.g. "my-bible-reading-log")
-// 3. Once created, click the </> (Web) icon to add a web app
-// 4. Copy the firebaseConfig object shown and paste it below,
-//    replacing the placeholder values.
-// 5. In the Firebase console, go to Authentication > Sign-in method
-//    and enable "Google" and "Apple"
-// 6. Go to Firestore Database > Create database (start in production mode)
-// 7. Go to Firestore > Rules and paste the security rules from FIREBASE_RULES.md
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
   GoogleAuthProvider,
-  OAuthProvider,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
@@ -39,7 +23,6 @@ import {
   deleteField,
 } from "firebase/firestore";
 
-// ─── REPLACE THIS WITH YOUR FIREBASE CONFIG ──────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyAfAwBXoalxdTzwohpjB-v65G-BPJjifFE",
   authDomain: "daily-bible-reading-log.firebaseapp.com",
@@ -47,9 +30,8 @@ const firebaseConfig = {
   storageBucket: "daily-bible-reading-log.firebasestorage.app",
   messagingSenderId: "500677527816",
   appId: "1:500677527816:web:66b7c121c51f0f8c38c4bd",
-  measurementId: "G-8JMD13G96Y"
+  measurementId: "G-8JMD13G96Y",
 };
-// ─────────────────────────────────────────────────────────────────────────────
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -59,13 +41,6 @@ export const db = getFirestore(app);
 
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
-  return signInWithPopup(auth, provider);
-}
-
-export async function signInWithApple() {
-  const provider = new OAuthProvider("apple.com");
-  provider.addScope("email");
-  provider.addScope("name");
   return signInWithPopup(auth, provider);
 }
 
@@ -83,7 +58,6 @@ export async function getOrCreateUserProfile(firebaseUser) {
   const ref = doc(db, "users", firebaseUser.uid);
   const snap = await getDoc(ref);
   if (snap.exists()) return snap.data();
-
   const profile = {
     uid: firebaseUser.uid,
     displayName: firebaseUser.displayName || "Reader",
@@ -98,32 +72,19 @@ export async function getOrCreateUserProfile(firebaseUser) {
 }
 
 export async function updateUserProfile(uid, updates) {
-  const ref = doc(db, "users", uid);
-  return updateDoc(ref, updates);
+  return updateDoc(doc(db, "users", uid), updates);
 }
 
 export function listenToUserProfile(uid, callback) {
-  const ref = doc(db, "users", uid);
-  return onSnapshot(ref, (snap) => callback(snap.exists() ? snap.data() : null));
+  return onSnapshot(doc(db, "users", uid), (snap) => callback(snap.exists() ? snap.data() : null));
 }
 
 // ─── READING PROGRESS ─────────────────────────────────────────────────────────
-// Structure: users/{uid}/progress/{bookId}
-// Each doc: { bookId, chapters: { "1": "2026-05-22", "2": "2026-05-23", ... } }
-
-export async function getBookProgress(uid, bookId) {
-  const ref = doc(db, "users", uid, "progress", bookId);
-  const snap = await getDoc(ref);
-  return snap.exists() ? snap.data().chapters || {} : {};
-}
 
 export function listenToAllProgress(uid, callback) {
-  const ref = collection(db, "users", uid, "progress");
-  return onSnapshot(ref, (snap) => {
+  return onSnapshot(collection(db, "users", uid, "progress"), (snap) => {
     const result = {};
-    snap.forEach((d) => {
-      result[d.id] = d.data().chapters || {};
-    });
+    snap.forEach((d) => { result[d.id] = d.data().chapters || {}; });
     callback(result);
   });
 }
@@ -139,97 +100,65 @@ export async function markChapterRead(uid, bookId, chapterNum, dateStr) {
 }
 
 export async function unmarkChapter(uid, bookId, chapterNum) {
-  const ref = doc(db, "users", uid, "progress", bookId);
-  await updateDoc(ref, { [`chapters.${chapterNum}`]: deleteField() });
+  await updateDoc(doc(db, "users", uid, "progress", bookId), {
+    [`chapters.${chapterNum}`]: deleteField(),
+  });
 }
 
 // ─── NOTES ────────────────────────────────────────────────────────────────────
-// Structure: users/{uid}/notes/{bookId_chapter}
 
 export function listenToBookNotes(uid, bookId, callback) {
-  const ref = collection(db, "users", uid, "notes");
-  const q = query(ref, where("bookId", "==", bookId));
+  const q = query(collection(db, "users", uid, "notes"), where("bookId", "==", bookId));
   return onSnapshot(q, (snap) => {
     const notes = {};
-    snap.forEach((d) => {
-      notes[d.data().chapter] = d.data();
-    });
+    snap.forEach((d) => { notes[d.data().chapter] = d.data(); });
     callback(notes);
   });
 }
 
 export async function saveNote(uid, bookId, chapter, text, isPublic) {
   const noteId = `${bookId}_${chapter}`;
-  const ref = doc(db, "users", uid, "notes", noteId);
-  await setDoc(ref, {
-    bookId,
-    chapter,
-    text,
-    isPublic,
-    updatedAt: serverTimestamp(),
+  await setDoc(doc(db, "users", uid, "notes", noteId), {
+    bookId, chapter, text, isPublic, updatedAt: serverTimestamp(),
   }, { merge: true });
 }
 
-export async function deleteNote(uid, bookId, chapter) {
-  const noteId = `${bookId}_${chapter}`;
-  const ref = doc(db, "users", uid, "notes", noteId);
-  await updateDoc(ref, { text: "", isPublic: false, updatedAt: serverTimestamp() });
-}
-
 // ─── FAMILY GROUPS ────────────────────────────────────────────────────────────
-// Structure: familyGroups/{groupId} { members: [uid, ...], createdBy, name }
 
 export async function createFamilyGroup(uid, groupName) {
   const groupId = `group_${uid}_${Date.now()}`;
-  const ref = doc(db, "familyGroups", groupId);
-  await setDoc(ref, {
-    id: groupId,
-    name: groupName || "My Family",
-    createdBy: uid,
-    members: [uid],
-    createdAt: serverTimestamp(),
+  await setDoc(doc(db, "familyGroups", groupId), {
+    id: groupId, name: groupName || "My Family",
+    createdBy: uid, members: [uid], createdAt: serverTimestamp(),
   });
   await updateUserProfile(uid, { familyGroupId: groupId });
   return groupId;
 }
 
-export async function getFamilyGroup(groupId) {
-  const ref = doc(db, "familyGroups", groupId);
-  const snap = await getDoc(ref);
-  return snap.exists() ? snap.data() : null;
-}
-
 export function listenToFamilyGroup(groupId, callback) {
-  const ref = doc(db, "familyGroups", groupId);
-  return onSnapshot(ref, (snap) => callback(snap.exists() ? snap.data() : null));
+  return onSnapshot(doc(db, "familyGroups", groupId), (snap) => callback(snap.exists() ? snap.data() : null));
 }
 
 export async function addMemberToGroup(groupId, memberEmail) {
-  // Find user by email
-  const usersRef = collection(db, "users");
-  const q = query(usersRef, where("email", "==", memberEmail));
+  const q = query(collection(db, "users"), where("email", "==", memberEmail));
   const snap = await getDocs(q);
   if (snap.empty) throw new Error("No user found with that email. They need to sign in first.");
   const memberDoc = snap.docs[0];
   const memberUid = memberDoc.id;
-
-  const groupRef = doc(db, "familyGroups", groupId);
-  await updateDoc(groupRef, { members: arrayUnion(memberUid) });
+  await updateDoc(doc(db, "familyGroups", groupId), { members: arrayUnion(memberUid) });
   await updateUserProfile(memberUid, { familyGroupId: groupId });
   return memberDoc.data();
 }
 
 export async function removeMemberFromGroup(groupId, memberUid) {
-  const groupRef = doc(db, "familyGroups", groupId);
-  await updateDoc(groupRef, { members: arrayRemove(memberUid) });
+  await updateDoc(doc(db, "familyGroups", groupId), { members: arrayRemove(memberUid) });
   await updateUserProfile(memberUid, { familyGroupId: null });
 }
 
 export async function getMembersProgress(memberUids) {
   const results = {};
   for (const uid of memberUids) {
-    const progressRef = collection(db, "users", uid, "progress");
-    const snap = await getDocs(progressRef);
+    const snap = await getDocs(collection(db, "users", uid, "progress"));
     const progress = {};
     snap.forEach((d) => { progress[d.id] = d.data().chapters || {}; });
     results[uid] = progress;
@@ -240,22 +169,13 @@ export async function getMembersProgress(memberUids) {
 export async function getMembersProfiles(memberUids) {
   const profiles = {};
   for (const uid of memberUids) {
-    const ref = doc(db, "users", uid);
-    const snap = await getDoc(ref);
+    const snap = await getDoc(doc(db, "users", uid));
     if (snap.exists()) profiles[uid] = snap.data();
   }
   return profiles;
 }
 
-export async function getPublicNotesForGroup(memberUids, bookId, chapter) {
-  const notes = [];
-  for (const uid of memberUids) {
-    const noteId = `${bookId}_${chapter}`;
-    const ref = doc(db, "users", uid, "notes", noteId);
-    const snap = await getDoc(ref);
-    if (snap.exists() && snap.data().isPublic && snap.data().text) {
-      notes.push({ uid, ...snap.data() });
-    }
-  }
-  return notes;
+export async function getFamilyGroup(groupId) {
+  const snap = await getDoc(doc(db, "familyGroups", groupId));
+  return snap.exists() ? snap.data() : null;
 }
