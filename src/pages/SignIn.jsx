@@ -10,12 +10,6 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const AppleIcon = () => (
-  <svg width="16" height="18" viewBox="0 0 16 18" fill="currentColor">
-    <path d="M13.18 9.5c-.02-2.17 1.77-3.22 1.85-3.27-1.01-1.47-2.57-1.67-3.13-1.69-1.33-.13-2.6.78-3.27.78-.67 0-1.7-.76-2.8-.74C4.27 4.6 2.78 5.6 1.97 7.1c-1.63 2.83-.42 7.03 1.17 9.33.78 1.12 1.7 2.38 2.92 2.33 1.17-.05 1.62-.75 3.04-.75 1.42 0 1.82.75 3.07.73 1.26-.02 2.06-1.14 2.83-2.27.9-1.3 1.27-2.57 1.29-2.63-.03-.01-2.48-.95-2.51-3.34zm-2.34-6.12c.65-.78 1.08-1.87.96-2.95-.93.04-2.05.62-2.72 1.38-.6.68-1.12 1.77-.98 2.81 1.03.08 2.09-.52 2.74-1.24z"/>
-  </svg>
-);
-
 const OpenBookIcon = () => (
   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -25,20 +19,19 @@ const OpenBookIcon = () => (
 );
 
 export default function SignIn() {
-  const [loading, setLoading] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSignIn = async (provider) => {
-    setLoading(provider);
+  const handleSignIn = async () => {
+    setLoading(true);
     setError("");
     try {
-      if (provider === "google") await signInWithGoogle();
-      else await signInWithApple();
+      await signInWithGoogle();
     } catch (e) {
       setError("Sign in failed. Please try again.");
       console.error(e);
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   };
 
@@ -83,32 +76,21 @@ export default function SignIn() {
         ))}
       </div>
 
-      {/* Sign in buttons */}
-      <div style={{ width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: 10 }}>
-        <button onClick={() => handleSignIn("google")} disabled={loading !== null}
+      {/* Sign in button — Google only */}
+      <div style={{ width: "100%", maxWidth: 320 }}>
+        <button
+          onClick={handleSignIn}
+          disabled={loading}
           style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
             padding: "13px 20px", borderRadius: 10, background: "#fff", color: "#1a1a1a",
             border: "none", cursor: loading ? "wait" : "pointer", fontSize: 14, fontWeight: 700,
             fontFamily: "'Nunito', system-ui, sans-serif",
-            opacity: loading && loading !== "google" ? 0.5 : 1,
+            opacity: loading ? 0.7 : 1,
             boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "opacity 0.15s",
           }}>
           <GoogleIcon />
-          {loading === "google" ? "Signing in…" : "Continue with Google"}
-        </button>
-
-        <button onClick={() => handleSignIn("apple")} disabled={loading !== null}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-            padding: "13px 20px", borderRadius: 10, background: "#000", color: "#fff",
-            border: "none", cursor: loading ? "wait" : "pointer", fontSize: 14, fontWeight: 700,
-            fontFamily: "'Nunito', system-ui, sans-serif",
-            opacity: loading && loading !== "apple" ? 0.5 : 1,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transition: "opacity 0.15s",
-          }}>
-          <AppleIcon />
-          {loading === "apple" ? "Signing in…" : "Continue with Apple"}
+          {loading ? "Signing in…" : "Continue with Google"}
         </button>
       </div>
 
