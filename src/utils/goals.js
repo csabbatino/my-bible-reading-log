@@ -89,6 +89,10 @@ const VAPID_KEY = "BG0riagRXi5vLySVSXzbKYwUg4G_OdNE_5e5bKtfLYy8wdKxv7klG2KWxDbXv
 
 export async function requestNotificationPermission(uid) {
   try {
+    // Register service worker first
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    await navigator.serviceWorker.ready;
+
     const { getMessaging, getToken } = await import("firebase/messaging");
     const { getApp } = await import("firebase/app");
 
@@ -96,10 +100,12 @@ export async function requestNotificationPermission(uid) {
     if (permission !== "granted") return null;
 
     const messaging = getMessaging(getApp());
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: registration,
+    });
 
     if (token) {
-      // Save token to user's profile so server can send notifications
       await updateDoc(doc(db, "users", uid), { fcmToken: token, notificationsEnabled: true });
       return token;
     }
