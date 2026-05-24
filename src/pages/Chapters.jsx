@@ -6,32 +6,41 @@ import { checkNewBadges } from "../data/badges.js";
 import { todayStr, formatDate, pctForPsalmsBook } from "../utils/progress.js";
 import { BOOK_MAP } from "../data/bibleData.js";
 import { BOOK_INFO } from "../data/bookInfo.js";
+import { getChapterUrl, getIntroUrl } from "../data/jwLinks.js";
 import BadgeCelebration from "../components/BadgeCelebration.jsx";
 
 function BookInfoPanel({ bookId }) {
   const info = BOOK_INFO[bookId];
   const book = BOOK_MAP[bookId];
+  const introUrl = getIntroUrl(bookId);
   if (!info) return null;
 
   return (
     <div style={{
       background: "var(--surface)", borderRadius: 12, padding: "12px 14px",
       border: "1px solid var(--border)", marginBottom: 12,
-      fontSize: 12,
     }}>
-      <div style={{ fontSize: 11, color: "var(--accent)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
-        About This Book
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontSize: 11, color: "var(--accent)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>
+          About This Book
+        </div>
+        {introUrl && (
+          <a href={introUrl} target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 11, color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>
+            Introduction ↗
+          </a>
+        )}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "5px 10px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "5px 10px", fontSize: 12 }}>
         {[
-          ["✍️ Writer", info.writer],
-          ["📍 Written in", info.placeWritten],
-          ["📅 Completed", info.writingCompleted],
-          info.timeCovered ? ["⏳ Time covered", info.timeCovered] : null,
+          ["Writer", info.writer],
+          ["Written in", info.placeWritten],
+          ["Completed", info.writingCompleted],
+          info.timeCovered ? ["Time covered", info.timeCovered] : null,
         ].filter(Boolean).map(([label, value]) => (
           <>
-            <span style={{ color: "var(--text-muted)", whiteSpace: "nowrap" }}>{label}</span>
-            <span style={{ color: "var(--text)" }}>{value}</span>
+            <span key={label + "l"} style={{ color: "var(--text-muted)", whiteSpace: "nowrap" }}>{label}</span>
+            <span key={label + "v"} style={{ color: "var(--text)" }}>{value}</span>
           </>
         ))}
       </div>
@@ -59,13 +68,12 @@ function NoteEditor({ uid, bookId, chapter, initialNote, onClose, familyNotes })
   return (
     <div>
       <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
+        value={text} onChange={(e) => setText(e.target.value)}
         placeholder="What struck you about this chapter? Any insights or reflections..."
         style={{
           width: "100%", minHeight: 120, background: "var(--bg)", border: "1px solid var(--border)",
           borderRadius: 10, padding: "10px 12px", color: "var(--text)", fontSize: 14,
-          fontFamily: "Georgia, serif", resize: "vertical", outline: "none", boxSizing: "border-box",
+          resize: "vertical", outline: "none", boxSizing: "border-box",
         }}
       />
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, marginBottom: 16 }}>
@@ -74,14 +82,10 @@ function NoteEditor({ uid, bookId, chapter, initialNote, onClose, familyNotes })
           background: isPublic ? "var(--green)" : "var(--border)",
           position: "relative", cursor: "pointer", transition: "background 0.2s",
         }}>
-          <div style={{
-            position: "absolute", top: 2, left: isPublic ? 18 : 2,
-            width: 16, height: 16, borderRadius: 8, background: "#fff",
-            transition: "left 0.2s",
-          }} />
+          <div style={{ position: "absolute", top: 2, left: isPublic ? 18 : 2, width: 16, height: 16, borderRadius: 8, background: "#fff", transition: "left 0.2s" }} />
         </div>
         <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
-          {isPublic ? "🌍 Visible to family" : "🔒 Private (only you)"}
+          {isPublic ? "Visible to family" : "Private (only you)"}
         </span>
       </div>
 
@@ -90,7 +94,7 @@ function NoteEditor({ uid, bookId, chapter, initialNote, onClose, familyNotes })
           <Divider label="Family Notes" />
           {familyNotes.map((n, i) => (
             <div key={i} style={{ background: "var(--bg)", borderRadius: 10, padding: "10px 12px", marginBottom: 8, border: "1px solid var(--border)" }}>
-              <div style={{ fontSize: 11, color: "var(--accent)", marginBottom: 4 }}>{n.displayName || "Family member"}</div>
+              <div style={{ fontSize: 11, color: "var(--accent)", marginBottom: 4, fontWeight: 600 }}>{n.displayName || "Family member"}</div>
               <div style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>{n.text}</div>
             </div>
           ))}
@@ -107,8 +111,9 @@ function NoteEditor({ uid, bookId, chapter, initialNote, onClose, familyNotes })
   );
 }
 
-function ChapterRow({ chapter, isRead, dateStr, note, onToggle, onDateChange, onNoteClick }) {
+function ChapterRow({ bookId, chapter, isRead, dateStr, note, onToggle, onDateChange, onNoteClick }) {
   const [editingDate, setEditingDate] = useState(false);
+  const chapterUrl = getChapterUrl(bookId, chapter);
 
   return (
     <div style={{
@@ -119,8 +124,23 @@ function ChapterRow({ chapter, isRead, dateStr, note, onToggle, onDateChange, on
     }}>
       <Checkbox checked={isRead} onChange={onToggle} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, color: isRead ? "var(--text)" : "var(--text-muted)", fontFamily: "Georgia, serif" }}>
-          Chapter {chapter}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 14, color: isRead ? "var(--text)" : "var(--text-muted)", fontWeight: 500 }}>
+            Chapter {chapter}
+          </span>
+          {chapterUrl && (
+            <a
+              href={chapterUrl} target="_blank" rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                fontSize: 11, color: "var(--accent)", textDecoration: "none",
+                fontWeight: 600, padding: "1px 6px", borderRadius: 4,
+                border: "1px solid var(--accent)", opacity: 0.8,
+              }}
+            >
+              Read ↗
+            </a>
+          )}
         </div>
         {isRead && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
@@ -128,25 +148,18 @@ function ChapterRow({ chapter, isRead, dateStr, note, onToggle, onDateChange, on
               <input type="date" defaultValue={dateStr}
                 onBlur={(e) => { onDateChange(e.target.value); setEditingDate(false); }}
                 autoFocus
-                style={{
-                  background: "var(--bg)", border: "1px solid var(--accent)",
-                  borderRadius: 6, padding: "2px 6px", color: "var(--accent)",
-                  fontSize: 11, fontFamily: "Georgia, serif", outline: "none",
-                }}
+                style={{ background: "var(--bg)", border: "1px solid var(--accent)", borderRadius: 6, padding: "2px 6px", color: "var(--accent)", fontSize: 11, outline: "none" }}
               />
             ) : (
-              <span onClick={() => setEditingDate(true)} style={{ fontSize: 11, color: "var(--accent)", cursor: "pointer" }}>
-                📅 {formatDate(dateStr)} ✏️
+              <span onClick={() => setEditingDate(true)} style={{ fontSize: 11, color: "var(--text-muted)", cursor: "pointer" }}>
+                {formatDate(dateStr)} ✏️
               </span>
             )}
           </div>
         )}
       </div>
       {isRead && (
-        <div onClick={onNoteClick}
-          style={{ fontSize: 18, cursor: "pointer", opacity: note?.text ? 1 : 0.35, padding: "0 4px" }}
-          title={note?.text ? "View/edit note" : "Add note"}
-        >
+        <div onClick={onNoteClick} style={{ fontSize: 18, cursor: "pointer", opacity: note?.text ? 1 : 0.3, padding: "0 4px" }}>
           {note?.text ? (note.isPublic ? "💬" : "📝") : "📝"}
         </div>
       )}
@@ -168,7 +181,6 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyMemb
 
   const bookProgress = progress[bookId] || {};
 
-  // Check for new badges after each progress update
   const checkBadges = useCallback(async () => {
     try {
       const earned = await getEarnedBadges(uid);
@@ -176,39 +188,26 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyMemb
       const streak = getCurrentStreak(progress);
       const fresh = checkNewBadges(progress, streak, earned);
       if (fresh.length > 0) {
-        const allIds = [...earned, ...fresh.map((b) => b.id)];
-        await saveEarnedBadges(uid, allIds);
+        await saveEarnedBadges(uid, [...earned, ...fresh.map((b) => b.id)]);
         setNewBadges(fresh);
       }
-    } catch (e) {
-      console.error("Badge check failed:", e);
-    }
+    } catch (e) { console.error("Badge check failed:", e); }
   }, [uid, progress]);
 
-  useEffect(() => {
-    if (uid && progress) checkBadges();
-  }, [progress]);
+  useEffect(() => { if (uid && progress) checkBadges(); }, [progress]);
 
   const handleToggle = useCallback(async (chapter) => {
     const isRead = !!bookProgress[chapter];
     try {
-      if (isRead) {
-        await unmarkChapter(uid, bookId, chapter);
-      } else {
-        await markChapterRead(uid, bookId, chapter, todayStr());
-      }
-    } catch (e) {
-      alert("Error updating progress: " + e.message);
-    }
+      if (isRead) await unmarkChapter(uid, bookId, chapter);
+      else await markChapterRead(uid, bookId, chapter, todayStr());
+    } catch (e) { alert("Error updating progress: " + e.message); }
   }, [uid, bookId, bookProgress]);
 
   const handleDateChange = useCallback(async (chapter, newDate) => {
     if (!newDate) return;
-    try {
-      await markChapterRead(uid, bookId, chapter, newDate);
-    } catch (e) {
-      alert("Error updating date: " + e.message);
-    }
+    try { await markChapterRead(uid, bookId, chapter, newDate); }
+    catch (e) { alert("Error updating date: " + e.message); }
   }, [uid, bookId]);
 
   if (!book) return <div style={{ color: "var(--text-muted)", padding: 20 }}>Book not found</div>;
@@ -220,7 +219,7 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyMemb
   const renderChapterList = (start, end) =>
     Array.from({ length: end - start + 1 }, (_, i) => start + i).map((ch) => (
       <ChapterRow
-        key={ch} chapter={ch}
+        key={ch} bookId={bookId} chapter={ch}
         isRead={!!bookProgress[ch]} dateStr={bookProgress[ch]}
         note={notes[ch]}
         onToggle={() => handleToggle(ch)}
@@ -231,7 +230,6 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyMemb
 
   return (
     <div style={{ paddingBottom: 16 }}>
-      {/* Progress header */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{readCount} of {book.chapters} chapters read</div>
@@ -240,11 +238,10 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyMemb
         <ProgressBar pct={pct} color={pct === 100 ? "var(--green)" : "var(--accent)"} height={7} />
       </div>
 
-      {/* Book info panel */}
       <BookInfoPanel bookId={bookId} />
 
       <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 12, fontStyle: "italic" }}>
-        Tap a chapter to mark as read · Tap 📅 to edit the date · Tap 📝 for notes
+        Tap a chapter to mark as read · Tap ✏️ to edit date · Tap 📝 for notes · Tap Read ↗ to open on JW.org
       </div>
 
       {hasPsalmsBooks ? (
@@ -252,13 +249,9 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyMemb
           const subPct = pctForPsalmsBook(progress, sub);
           return (
             <div key={sub.label} style={{ marginBottom: 8 }}>
-              <div style={{
-                padding: "8px 10px", background: "var(--surface)", borderRadius: 10,
-                border: "1px solid var(--border)", marginBottom: 5,
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-              }}>
-                <span style={{ fontSize: 13, color: "var(--text)", fontFamily: "Georgia, serif", fontWeight: "bold" }}>
-                  {sub.label} <span style={{ color: "var(--text-muted)", fontWeight: "normal" }}>(Ps {sub.start}–{sub.end})</span>
+              <div style={{ padding: "8px 10px", background: "var(--surface)", borderRadius: 10, border: "1px solid var(--border)", marginBottom: 5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 700 }}>
+                  {sub.label} <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(Ps {sub.start}–{sub.end})</span>
                 </span>
                 <Badge color={subPct === 100 ? "var(--green)" : "var(--hebrew)"}>{subPct}%</Badge>
               </div>
@@ -270,11 +263,9 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyMemb
         renderChapterList(1, book.chapters)
       )}
 
-      {/* Note modal */}
       <Modal isOpen={!!noteModal} onClose={() => setNoteModal(null)} title={`Notes — ${book.name} ${noteModal?.chapter}`}>
         {noteModal && (
-          <NoteEditor
-            uid={uid} bookId={bookId} chapter={noteModal.chapter}
+          <NoteEditor uid={uid} bookId={bookId} chapter={noteModal.chapter}
             initialNote={notes[noteModal.chapter]}
             onClose={() => setNoteModal(null)}
             familyNotes={noteModal.familyNotes}
@@ -282,7 +273,6 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyMemb
         )}
       </Modal>
 
-      {/* Badge celebration */}
       {newBadges.length > 0 && (
         <BadgeCelebration badges={newBadges} onDone={() => setNewBadges([])} />
       )}

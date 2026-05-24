@@ -50,14 +50,14 @@ export default function BadgeCelebration({ badges, onDone }) {
 
         <div style={{
           fontSize: isBibleComplete ? 20 : 17,
-          color: "var(--accent-light)", fontFamily: "Georgia, serif",
+          color: "var(--accent-light)", fontFamily: "'Nunito', system-ui, sans-serif",
           fontWeight: "bold", marginBottom: 8,
         }}>
           {isBibleComplete ? "🎉 Congratulations! 🎉" : isBookBadge ? "Book Complete!" : "Achievement Unlocked!"}
         </div>
 
         <div style={{
-          fontSize: 22, color: "var(--text)", fontFamily: "Georgia, serif",
+          fontSize: 22, color: "var(--text)", fontFamily: "'Nunito', system-ui, sans-serif",
           fontWeight: "bold", marginBottom: 10,
         }}>
           {badge.label}
@@ -72,7 +72,7 @@ export default function BadgeCelebration({ badges, onDone }) {
           style={{
             background: "var(--accent)", color: "var(--bg)", border: "none",
             borderRadius: 12, padding: "12px 32px", fontSize: 15,
-            fontFamily: "Georgia, serif", fontWeight: "bold", cursor: "pointer",
+            fontFamily: "'Nunito', system-ui, sans-serif", fontWeight: "bold", cursor: "pointer",
             width: "100%",
           }}
         >

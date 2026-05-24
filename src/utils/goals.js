@@ -85,7 +85,7 @@ export async function saveEarnedBadges(uid, badgeIds) {
 // ─────────────────────────────────────────────
 
 // Replace with your VAPID public key from Firebase Console → Project Settings → Cloud Messaging
-const VAPID_KEY = "YOUR_VAPID_PUBLIC_KEY";
+const VAPID_KEY = "BG0riagRXi5vLySVSXzbKYwUg4G_OdNE_5e5bKtfLYy8wdKxv7klG2KWxDbXv516MQCym4_Qw2SRns1JiutBuK8";
 
 export async function requestNotificationPermission(uid) {
   try {

@@ -25,7 +25,7 @@ function BookRow({ book, progress, onClick }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-          <span style={{ fontSize: 14, color: pct > 0 ? "var(--text)" : "var(--text-muted)", fontFamily: "Georgia, serif" }}>
+          <span style={{ fontSize: 14, color: pct > 0 ? "var(--text)" : "var(--text-muted)", fontFamily: "'Nunito', system-ui, sans-serif" }}>
             {book.name}
           </span>
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{read}/{book.chapters}</span>
@@ -56,7 +56,7 @@ function SectionAccordion({ sectionKey, section, progress, onBookClick, testamen
       >
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-            <span style={{ fontSize: 13, color: "var(--text)", fontFamily: "Georgia, serif", fontWeight: "bold" }}>
+            <span style={{ fontSize: 13, color: "var(--text)", fontFamily: "'Nunito', system-ui, sans-serif", fontWeight: "bold" }}>
               {section.label}
             </span>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{read}/{total} · {pct}%</span>
@@ -102,7 +102,7 @@ export default function Books({ progress, onNavigate, initialTestament }) {
               background: tab === t.id ? "var(--accent)" : "var(--surface)",
               color: tab === t.id ? "var(--bg)" : "var(--text-muted)",
               border: `1px solid ${tab === t.id ? "var(--accent)" : "var(--border)"}`,
-              cursor: "pointer", fontFamily: "Georgia, serif", fontWeight: tab === t.id ? "bold" : "normal",
+              cursor: "pointer", fontFamily: "'Nunito', system-ui, sans-serif", fontWeight: tab === t.id ? "bold" : "normal",
             }}
           >
             {t.label}

@@ -2,31 +2,56 @@ import { useMemo, useState } from "react";
 import { ProgressRing, ProgressBar, Card, Divider, Button, Badge, Avatar } from "../components/UI.jsx";
 import {
   overallPct, hebrewPct, greekPct, countReadChapters,
-  getCurrentStreak, getRecentActivity, formatDate,
+  getCurrentStreak, getRecentActivity, formatDate, getSevenDayPace,
 } from "../utils/progress.js";
 import { countChaptersThisWeek } from "../utils/goals.js";
 import { TOTAL_CHAPTERS, HEBREW_CHAPTERS, GREEK_CHAPTERS, BOOK_MAP } from "../data/bibleData.js";
 
+function StreakCard({ streak, pace }) {
+  return (
+    <Card style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 0 }}>
+        {/* Streak */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0" }}>
+          <div style={{ fontSize: 48, fontWeight: 800, color: streak > 0 ? "var(--accent)" : "var(--text-muted)", lineHeight: 1, letterSpacing: "-2px" }}>
+            {streak}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+            Day Streak
+          </div>
+          {streak > 0 && (
+            <div style={{ fontSize: 20, marginTop: 4 }}>🔥</div>
+          )}
+          {streak === 0 && (
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontStyle: "italic", textAlign: "center" }}>
+              Read today to start your streak!
+            </div>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div style={{ width: 1, background: "var(--border)", margin: "8px 0" }} />
+
+        {/* 7-day pace */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0" }}>
+          <div style={{ fontSize: 48, fontWeight: 800, color: pace > 0 ? "var(--accent)" : "var(--text-muted)", lineHeight: 1, letterSpacing: "-2px" }}>
+            {pace}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, textAlign: "center" }}>
+            Ch/Day
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontStyle: "italic" }}>
+            last 7 days
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function PaceCalculator({ progress, totalRead }) {
   const remaining = TOTAL_CHAPTERS - totalRead;
-
-  // Calculate actual pace from reading history
-  const actualPace = useMemo(() => {
-    const allDates = [];
-    for (const bookProgress of Object.values(progress)) {
-      for (const dateStr of Object.values(bookProgress)) {
-        if (dateStr) allDates.push(new Date(dateStr));
-      }
-    }
-    if (allDates.length < 2) return null;
-    allDates.sort((a, b) => a - b);
-    const earliest = allDates[0];
-    const latest = allDates[allDates.length - 1];
-    const daysDiff = Math.max(1, (latest - earliest) / (1000 * 60 * 60 * 24));
-    const pace = allDates.length / daysDiff;
-    return Math.round(pace * 10) / 10;
-  }, [progress]);
-
+  const actualPace = useMemo(() => getSevenDayPace(progress), [progress]);
   const [chapPerDay, setChapPerDay] = useState(actualPace || 1);
 
   const finishDate = useMemo(() => {
@@ -48,19 +73,16 @@ function PaceCalculator({ progress, totalRead }) {
           style={{
             width: 52, background: "var(--bg)", border: "1px solid var(--accent)",
             borderRadius: 6, padding: "3px 6px", color: "var(--accent)",
-            fontSize: 14, fontWeight: 600, outline: "none", textAlign: "center",
+            fontSize: 14, fontWeight: 700, outline: "none", textAlign: "center",
           }}
         />
-        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>chapter{chapPerDay !== 1 ? "s" : ""} per day, I will complete the Bible on</span>
+        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+          chapter{chapPerDay !== 1 ? "s" : ""} per day, I will complete the Bible on
+        </span>
       </div>
       {finishDate && (
-        <div style={{ fontSize: 15, color: "var(--accent-light)", fontWeight: 600, marginTop: 6 }}>
+        <div style={{ fontSize: 15, color: "var(--accent-light)", fontWeight: 700, marginTop: 6 }}>
           {finishDate}
-        </div>
-      )}
-      {actualPace && (
-        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-          Your current pace: ~{actualPace} chapter{actualPace !== 1 ? "s" : ""}/day
         </div>
       )}
     </div>
@@ -80,16 +102,15 @@ function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
 
   const today = new Date();
   const days = ["M", "T", "W", "T", "F", "S", "S"];
-  const todayDow = today.getDay();
-  const todayIndex = todayDow === 0 ? 6 : todayDow - 1;
+  const todayIndex = today.getDay() === 0 ? 6 : today.getDay() - 1;
 
   if (!weeklyGoal && !editing) {
     return (
-      <Card style={{ textAlign: "center", padding: "16px" }}>
+      <Card style={{ textAlign: "center", padding: "14px" }}>
         <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 10 }}>
-          Set a weekly reading goal to track your pace
+          Set a weekly reading goal
         </div>
-        <Button onClick={() => setEditing(true)} small>Set Weekly Goal</Button>
+        <Button onClick={() => setEditing(true)} small>Set Goal</Button>
       </Card>
     );
   }
@@ -98,20 +119,14 @@ function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
     return (
       <Card>
         <div style={{ fontSize: 13, color: "var(--text)", marginBottom: 10, fontWeight: 500 }}>
-          How many chapters per week?
+          Chapters per week?
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <input
-            type="number" min="1" max="100"
-            value={input}
+          <input type="number" min="1" max="100" value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
             autoFocus
-            style={{
-              flex: 1, background: "var(--bg)", border: "1px solid var(--accent)",
-              borderRadius: 8, padding: "8px 12px", color: "var(--text)",
-              fontSize: 16, outline: "none",
-            }}
+            style={{ flex: 1, background: "var(--bg)", border: "1px solid var(--accent)", borderRadius: 8, padding: "8px 12px", color: "var(--text)", fontSize: 16, outline: "none" }}
           />
           <Button onClick={handleSave} small>Save</Button>
           <Button onClick={() => setEditing(false)} variant="ghost" small>✕</Button>
@@ -123,14 +138,12 @@ function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
   return (
     <Card>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>
-          This Week
-        </div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>This Week</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 13, color: pct >= 100 ? "var(--green)" : "var(--text)", fontWeight: 500 }}>
-            {thisWeek} / {weeklyGoal} chapters
+          <span style={{ fontSize: 13, color: pct >= 100 ? "var(--green)" : "var(--text)", fontWeight: 600 }}>
+            {thisWeek} / {weeklyGoal} ch
           </span>
-          {pct >= 100 && <span style={{ fontSize: 14 }}>🎉</span>}
+          {pct >= 100 && <span>🎉</span>}
           <span onClick={() => setEditing(true)} style={{ fontSize: 11, color: "var(--text-muted)", cursor: "pointer", marginLeft: 4 }}>✏️</span>
         </div>
       </div>
@@ -138,16 +151,13 @@ function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
         {days.map((d, i) => (
           <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-            <div style={{ fontSize: 9, color: i === todayIndex ? "var(--accent)" : "var(--text-muted)", fontWeight: i === todayIndex ? 600 : 400 }}>{d}</div>
-            <div style={{
-              width: 7, height: 7, borderRadius: 4,
-              background: i < todayIndex ? "var(--green)" : i === todayIndex ? "var(--accent)" : "var(--border)",
-            }} />
+            <div style={{ fontSize: 9, color: i === todayIndex ? "var(--accent)" : "var(--text-muted)", fontWeight: i === todayIndex ? 700 : 400 }}>{d}</div>
+            <div style={{ width: 7, height: 7, borderRadius: 4, background: i < todayIndex ? "var(--green)" : i === todayIndex ? "var(--accent)" : "var(--border)" }} />
           </div>
         ))}
       </div>
       {pct >= 100 && (
-        <div style={{ marginTop: 10, fontSize: 12, color: "var(--green)", textAlign: "center", fontWeight: 500 }}>
+        <div style={{ marginTop: 8, fontSize: 12, color: "var(--green)", textAlign: "center", fontWeight: 600 }}>
           Weekly goal complete — keep going!
         </div>
       )}
@@ -161,6 +171,7 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
   const greek = useMemo(() => greekPct(progress), [progress]);
   const totalRead = useMemo(() => countReadChapters(progress), [progress]);
   const streak = useMemo(() => getCurrentStreak(progress), [progress]);
+  const pace = useMemo(() => getSevenDayPace(progress), [progress]);
   const recent = useMemo(() => getRecentActivity(progress, 3), [progress]);
 
   const hebrewRead = Math.round((hebrew / 100) * HEBREW_CHAPTERS);
@@ -177,47 +188,45 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
         <div>
           <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 2 }}>Welcome back,</div>
-          <div style={{ fontSize: 22, color: "var(--text)", fontWeight: 700, letterSpacing: "-0.3px" }}>
+          <div style={{ fontSize: 22, color: "var(--text)", fontWeight: 800, letterSpacing: "-0.5px" }}>
             {profile?.displayName?.split(" ")[0] || "Reader"}
           </div>
         </div>
-        {streak > 0 && (
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600 }}>🔥 {streak}-day streak</div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-              {totalRead.toLocaleString()} of {TOTAL_CHAPTERS.toLocaleString()} chapters
-            </div>
-          </div>
-        )}
+        <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "right", marginTop: 4 }}>
+          {totalRead.toLocaleString()} of {TOTAL_CHAPTERS.toLocaleString()} chapters
+        </div>
       </div>
+
+      {/* STREAK & PACE — most prominent */}
+      <StreakCard streak={streak} pace={pace} />
 
       {/* Weekly goal */}
       <WeeklyGoalCard progress={progress} weeklyGoal={profile?.weeklyGoal} onSetGoal={handleSetGoal} />
 
-      {/* Main progress ring */}
-      <Card style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 20, paddingBottom: 16 }}>
+      {/* Continue reading */}
+      <Button onClick={() => onNavigate("books")} style={{ width: "100%", marginBottom: 12, fontSize: 14, padding: "13px", fontWeight: 700 }}>
+        Continue Reading
+      </Button>
+
+      {/* Bible progress rings */}
+      <Card style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 18, paddingBottom: 14 }}>
         <ProgressRing
-          pct={overall} size={110} stroke={10} color="var(--accent)"
+          pct={overall} size={100} stroke={9} color="var(--accent)"
           label="Full Bible" sub={`${(TOTAL_CHAPTERS - totalRead).toLocaleString()} chapters remaining`}
         />
         <PaceCalculator progress={progress} totalRead={totalRead} />
       </Card>
 
-      {/* Hebrew & Greek rings */}
       <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-        <Card style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 14, paddingBottom: 14, marginBottom: 0, cursor: "pointer" }}
+        <Card style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, paddingBottom: 12, marginBottom: 0, cursor: "pointer" }}
           onClick={() => onNavigate("books", { testament: "hebrew" })}>
-          <ProgressRing pct={hebrew} size={76} stroke={7} color="var(--hebrew)" label="Hebrew" sub={`${hebrewRead}/${HEBREW_CHAPTERS}`} />
+          <ProgressRing pct={hebrew} size={70} stroke={6} color="var(--hebrew)" label="Hebrew" sub={`${hebrewRead}/${HEBREW_CHAPTERS}`} />
         </Card>
-        <Card style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 14, paddingBottom: 14, marginBottom: 0, cursor: "pointer" }}
+        <Card style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, paddingBottom: 12, marginBottom: 0, cursor: "pointer" }}
           onClick={() => onNavigate("books", { testament: "greek" })}>
-          <ProgressRing pct={greek} size={76} stroke={7} color="var(--greek)" label="Greek" sub={`${greekRead}/${GREEK_CHAPTERS}`} />
+          <ProgressRing pct={greek} size={70} stroke={6} color="var(--greek)" label="Greek" sub={`${greekRead}/${GREEK_CHAPTERS}`} />
         </Card>
       </div>
-
-      <Button onClick={() => onNavigate("books")} style={{ width: "100%", marginBottom: 14, fontSize: 14, padding: "13px", fontWeight: 600 }}>
-        Continue Reading
-      </Button>
 
       {/* Family feed */}
       {familyFeedItems?.length > 0 && (
@@ -232,7 +241,7 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
                 style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)", alignItems: "center", cursor: "pointer" }}>
                 <Avatar name={mp?.displayName || "?"} photoURL={mp?.photoURL} size={30} />
                 <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: 13, color: isMe ? "var(--accent-light)" : "var(--text)", fontWeight: 500 }}>
+                  <span style={{ fontSize: 13, color: isMe ? "var(--accent-light)" : "var(--text)", fontWeight: 600 }}>
                     {isMe ? "You" : mp?.displayName?.split(" ")[0] || "Family"}{" "}
                   </span>
                   <span style={{ fontSize: 13, color: "var(--text-muted)" }}>read {book?.name} {item.chapter}</span>
@@ -264,10 +273,9 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
         </>
       )}
 
-      {/* Fresh start — no cross icon */}
       {totalRead === 0 && (
         <Card style={{ textAlign: "center", padding: "28px 16px" }}>
-          <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 600, marginBottom: 6 }}>Begin your journey</div>
+          <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 700, marginBottom: 6 }}>Begin your journey</div>
           <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 18, lineHeight: 1.6 }}>
             Track every chapter as you read through the Bible from cover to cover.
           </div>

@@ -137,7 +137,7 @@ export default function App() {
     <div style={{
       maxWidth: 480, margin: "0 auto", minHeight: "100vh",
       background: "var(--bg)", display: "flex", flexDirection: "column",
-      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+      fontFamily: "'Nunito', system-ui, -apple-system, sans-serif",
     }}>
       {/* Top bar */}
       <div style={{
@@ -224,11 +224,11 @@ export default function App() {
       {toast && <Toast message={toast.msg} type={toast.type} />}
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swapdisplay=swap');
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         * { box-sizing: border-box; }
-        body { margin: 0; background: var(--bg); font-family: 'Inter', system-ui, sans-serif; }
+        body { margin: 0; background: var(--bg); font-family: 'Nunito', system-ui, sans-serif; }
         :root {
           --bg: #1a1208; --surface: #2a1f0e; --card: #332615;
           --accent: #c9a84c; --accent-light: #e8c97a;
@@ -237,7 +237,7 @@ export default function App() {
           --border: #4a3820; --hebrew: #8b6fd6; --greek: #4a9fd6;
           --danger: #c0392b; --nav-bg: #2a1f0e;
         }
-        input, textarea, button { font-family: 'Inter', system-ui, sans-serif; }
+        input, textarea, button { font-family: 'Nunito', system-ui, sans-serif; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }

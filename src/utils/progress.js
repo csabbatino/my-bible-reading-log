@@ -136,3 +136,20 @@ export function pctForPsalmsBook(progress, subBook) {
   const total = subBook.end - subBook.start + 1;
   return Math.round((read / total) * 100);
 }
+
+// 7-day rolling pace (chapters per day over last 7 days)
+export function getSevenDayPace(progress) {
+  const today = new Date();
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 6);
+  const fromStr = sevenDaysAgo.toISOString().split("T")[0];
+  const toStr = today.toISOString().split("T")[0];
+
+  let count = 0;
+  for (const bookProgress of Object.values(progress)) {
+    for (const dateStr of Object.values(bookProgress)) {
+      if (dateStr >= fromStr && dateStr <= toStr) count++;
+    }
+  }
+  return Math.round((count / 7) * 10) / 10;
+}

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { signInWithGoogle, signInWithApple } from "../utils/firebase.js";
 
-// Clean monochrome SVG icons
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
     <path d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z" fill="#4285F4"/>
@@ -17,17 +16,11 @@ const AppleIcon = () => (
   </svg>
 );
 
-// Monochrome scripture icon — open book
-const BookIcon = () => (
-  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M24 10C24 10 18 7 8 8v28c10-1 16 2 16 2s6-3 16-2V8C30 7 24 10 24 10z"/>
-    <line x1="24" y1="10" x2="24" y2="38"/>
-    <line x1="14" y1="14" x2="20" y2="13"/>
-    <line x1="14" y1="19" x2="20" y2="18"/>
-    <line x1="14" y1="24" x2="20" y2="23"/>
-    <line x1="28" y1="13" x2="34" y2="14"/>
-    <line x1="28" y1="18" x2="34" y2="19"/>
-    <line x1="28" y1="23" x2="34" y2="24"/>
+const OpenBookIcon = () => (
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
   </svg>
 );
 
@@ -53,42 +46,38 @@ export default function SignIn() {
     <div style={{
       minHeight: "100vh", display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center",
-      background: "var(--bg)", padding: "32px 24px",
-      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+      background: "var(--bg)", padding: "16px 24px 24px",
+      fontFamily: "'Nunito', system-ui, sans-serif",
     }}>
       {/* Logo */}
-      <div style={{ textAlign: "center", marginBottom: 48 }}>
-        <div style={{ color: "var(--accent)", marginBottom: 20, opacity: 0.9 }}>
-          <BookIcon />
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <div style={{ color: "var(--accent)", marginBottom: 14, opacity: 0.9 }}>
+          <OpenBookIcon />
         </div>
         <h1 style={{
-          fontSize: 28, color: "var(--text)", margin: "0 0 8px",
-          fontWeight: 700, letterSpacing: "-0.5px",
-          fontFamily: "'Inter', system-ui, sans-serif",
+          fontSize: 26, color: "var(--text)", margin: "0 0 8px",
+          fontWeight: 800, letterSpacing: "-0.5px",
         }}>
-          My Bible Reading Log
+          Daily Bible Reading Log
         </h1>
         <p style={{
           fontSize: 15, color: "var(--text-muted)", margin: 0,
-          fontWeight: 400, lineHeight: 1.5,
+          fontWeight: 500, lineHeight: 1.4,
         }}>
-          Track your journey through Scripture
+          Make Bible reading a daily habit.
         </p>
       </div>
 
       {/* Feature list */}
-      <div style={{ width: "100%", maxWidth: 320, marginBottom: 40 }}>
+      <div style={{ width: "100%", maxWidth: 320, marginBottom: 32 }}>
         {[
-          ["Track all 66 books, chapter by chapter"],
-          ["See your progress through the whole Bible"],
-          ["Share progress with your family"],
-          ["Jot down thoughts as you read"],
-        ].map(([text]) => (
-          <div key={text} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-            <div style={{
-              width: 6, height: 6, borderRadius: 3,
-              background: "var(--accent)", flexShrink: 0,
-            }} />
+          "Track all 66 books, chapter by chapter",
+          "Build streaks and track your daily pace",
+          "Share progress with your family",
+          "Read directly on JW.org from the app",
+        ].map((text) => (
+          <div key={text} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
+            <div style={{ width: 6, height: 6, borderRadius: 3, background: "var(--accent)", flexShrink: 0 }} />
             <span style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.4 }}>{text}</span>
           </div>
         ))}
@@ -96,40 +85,28 @@ export default function SignIn() {
 
       {/* Sign in buttons */}
       <div style={{ width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: 10 }}>
-        <button
-          onClick={() => handleSignIn("google")}
-          disabled={loading !== null}
+        <button onClick={() => handleSignIn("google")} disabled={loading !== null}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-            padding: "13px 20px", borderRadius: 10,
-            background: "#fff", color: "#1a1a1a",
-            border: "none", cursor: loading ? "wait" : "pointer",
-            fontSize: 14, fontWeight: 600,
-            fontFamily: "'Inter', system-ui, sans-serif",
+            padding: "13px 20px", borderRadius: 10, background: "#fff", color: "#1a1a1a",
+            border: "none", cursor: loading ? "wait" : "pointer", fontSize: 14, fontWeight: 700,
+            fontFamily: "'Nunito', system-ui, sans-serif",
             opacity: loading && loading !== "google" ? 0.5 : 1,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-            transition: "opacity 0.15s",
-          }}
-        >
+            boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "opacity 0.15s",
+          }}>
           <GoogleIcon />
           {loading === "google" ? "Signing in…" : "Continue with Google"}
         </button>
 
-        <button
-          onClick={() => handleSignIn("apple")}
-          disabled={loading !== null}
+        <button onClick={() => handleSignIn("apple")} disabled={loading !== null}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-            padding: "13px 20px", borderRadius: 10,
-            background: "#000", color: "#fff",
-            border: "none", cursor: loading ? "wait" : "pointer",
-            fontSize: 14, fontWeight: 600,
-            fontFamily: "'Inter', system-ui, sans-serif",
+            padding: "13px 20px", borderRadius: 10, background: "#000", color: "#fff",
+            border: "none", cursor: loading ? "wait" : "pointer", fontSize: 14, fontWeight: 700,
+            fontFamily: "'Nunito', system-ui, sans-serif",
             opacity: loading && loading !== "apple" ? 0.5 : 1,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-            transition: "opacity 0.15s",
-          }}
-        >
+            boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transition: "opacity 0.15s",
+          }}>
           <AppleIcon />
           {loading === "apple" ? "Signing in…" : "Continue with Apple"}
         </button>
@@ -141,11 +118,7 @@ export default function SignIn() {
         </div>
       )}
 
-      {/* Footer note — high contrast */}
-      <div style={{
-        marginTop: 40, fontSize: 12, color: "var(--text-muted)",
-        textAlign: "center", maxWidth: 280, lineHeight: 1.6, opacity: 1,
-      }}>
+      <div style={{ marginTop: 28, fontSize: 12, color: "var(--text-muted)", textAlign: "center", maxWidth: 280, lineHeight: 1.6 }}>
         Your reading data is private by default. Notes can optionally be shared with your family group.
       </div>
     </div>

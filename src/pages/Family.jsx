@@ -1,29 +1,61 @@
 import { useState, useEffect } from "react";
-import { Card, Divider, ProgressBar, Avatar, Badge, Button, Spinner } from "../components/UI.jsx";
+import { Card, Divider, ProgressBar, Avatar, Badge, Spinner } from "../components/UI.jsx";
 import { getMembersProgress, getMembersProfiles } from "../utils/firebase.js";
 import {
-  overallPct, hebrewPct, greekPct, countReadChapters,
-  getRecentActivity, formatDate,
+  overallPct, hebrewPct, greekPct, getCurrentStreak,
+  getRecentActivity, formatDate, getSevenDayPace,
 } from "../utils/progress.js";
-import { BIBLE_DATA, BOOK_MAP, TOTAL_CHAPTERS } from "../data/bibleData.js";
+import { BIBLE_DATA, BOOK_MAP } from "../data/bibleData.js";
 
-function MemberProgressRow({ profile, progress, isCurrentUser, rank, onViewDetail }) {
+function MemberCard({ profile, progress, isCurrentUser, rank }) {
   const pct = overallPct(progress);
+  const streak = getCurrentStreak(progress);
+  const pace = getSevenDayPace(progress);
   const medals = ["🥇", "🥈", "🥉"];
+
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-        <span style={{ fontSize: 16, width: 22 }}>{medals[rank] || "  "}</span>
-        <Avatar name={profile.displayName} photoURL={profile.photoURL} size={30} />
-        <span style={{ flex: 1, fontSize: 13, color: isCurrentUser ? "var(--accent-light)" : "var(--text)", fontFamily: "Georgia, serif" }}>
-          {profile.displayName}{isCurrentUser ? " (You)" : ""}
-        </span>
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{pct}%</span>
+    <Card style={{ marginBottom: 8 }}>
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{medals[rank] || ""}</span>
+        <Avatar name={profile.displayName} photoURL={profile.photoURL} size={36} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, color: isCurrentUser ? "var(--accent-light)" : "var(--text)", fontWeight: 700 }}>
+            {profile.displayName}{isCurrentUser ? " (You)" : ""}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{pct}% of Bible complete</div>
+        </div>
       </div>
-      <div style={{ paddingLeft: 46 }}>
-        <ProgressBar pct={pct} color={isCurrentUser ? "var(--accent)" : "var(--text-muted)"} />
+
+      {/* Streak & pace - prominent */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <div style={{
+          flex: 1, background: "var(--surface)", borderRadius: 8, padding: "8px 10px",
+          border: "1px solid var(--border)", textAlign: "center",
+        }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: streak > 0 ? "var(--accent)" : "var(--text-muted)", lineHeight: 1, letterSpacing: "-1px" }}>
+            {streak}
+          </div>
+          <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 3, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.8 }}>
+            {streak === 1 ? "Day Streak" : "Day Streak"} {streak > 0 ? "🔥" : ""}
+          </div>
+        </div>
+        <div style={{
+          flex: 1, background: "var(--surface)", borderRadius: 8, padding: "8px 10px",
+          border: "1px solid var(--border)", textAlign: "center",
+        }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: pace > 0 ? "var(--accent)" : "var(--text-muted)", lineHeight: 1, letterSpacing: "-1px" }}>
+            {pace}
+          </div>
+          <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 3, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.8 }}>
+            Ch/Day · 7 days
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* Progress bar */}
+      <ProgressBar pct={pct} color={isCurrentUser ? "var(--accent)" : "var(--text-muted)"} height={5} />
+    </Card>
   );
 }
 
@@ -31,7 +63,7 @@ export default function Family({ currentUid, familyGroup, currentProgress }) {
   const [memberProfiles, setMemberProfiles] = useState({});
   const [memberProgress, setMemberProgress] = useState({});
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("overall");
+  const [tab, setTab] = useState("members");
 
   useEffect(() => {
     if (!familyGroup?.members?.length) { setLoading(false); return; }
@@ -56,10 +88,8 @@ export default function Family({ currentUid, familyGroup, currentProgress }) {
     return (
       <div style={{ padding: "40px 16px", textAlign: "center" }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>👨‍👩‍👧‍👦</div>
-        <div style={{ fontSize: 15, color: "var(--text)", fontFamily: "Georgia, serif", marginBottom: 8 }}>
-          No family group yet
-        </div>
-        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20 }}>
+        <div style={{ fontSize: 15, color: "var(--text)", fontWeight: 600, marginBottom: 8 }}>No family group yet</div>
+        <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
           Go to Settings to create a family group and add members.
         </div>
       </div>
@@ -68,98 +98,82 @@ export default function Family({ currentUid, familyGroup, currentProgress }) {
 
   if (loading) return <Spinner />;
 
-  // Sort members by overall pct descending
+  // Sort by streak first, then by overall pct
   const sortedMembers = (familyGroup.members || [])
     .filter((uid) => memberProfiles[uid])
-    .map((uid) => ({ uid, profile: memberProfiles[uid], progress: memberProgress[uid] || {} }))
-    .sort((a, b) => overallPct(b.progress) - overallPct(a.progress));
+    .map((uid) => ({
+      uid,
+      profile: memberProfiles[uid],
+      progress: memberProgress[uid] || {},
+      streak: getCurrentStreak(memberProgress[uid] || {}),
+      pace: getSevenDayPace(memberProgress[uid] || {}),
+      pct: overallPct(memberProgress[uid] || {}),
+    }))
+    .sort((a, b) => b.streak - a.streak || b.pct - a.pct);
 
-  // Sections for comparison table
+  // Recent family activity
+  const recentActivity = sortedMembers.flatMap(({ uid, profile, progress }) =>
+    getRecentActivity(progress, 5).map((item) => ({
+      ...item, uid,
+      displayName: profile.displayName,
+      photoURL: profile.photoURL,
+    }))
+  ).sort((a, b) => new Date(b.dateStr) - new Date(a.dateStr)).slice(0, 10);
+
+  // Section comparison
   const sections = [
     { label: "Hebrew OT", pct: (p) => hebrewPct(p) },
     { label: "Greek NT", pct: (p) => greekPct(p) },
+    { label: "Psalms", pct: (p) => Math.round((Object.keys(p["psa"] || {}).length / 150) * 100) },
     {
-      label: "Psalms",
-      pct: (p) => {
-        const psaProgress = p["psa"] || {};
-        const read = Object.keys(psaProgress).length;
-        return Math.round((read / 150) * 100);
-      },
-    },
-    {
-      label: "Gospels",
-      pct: (p) => {
-        const gospelBooks = BIBLE_DATA.greek.sections.gospels.books;
-        const total = gospelBooks.reduce((s, b) => s + b.chapters, 0);
-        const read = gospelBooks.reduce((s, b) => s + Object.keys(p[b.id] || {}).length, 0);
+      label: "Gospels", pct: (p) => {
+        const books = BIBLE_DATA.greek.sections.gospels.books;
+        const total = books.reduce((s, b) => s + b.chapters, 0);
+        const read = books.reduce((s, b) => s + Object.keys(p[b.id] || {}).length, 0);
         return Math.round((read / total) * 100);
-      },
-    },
-    {
-      label: "Law",
-      pct: (p) => {
-        const lawBooks = BIBLE_DATA.hebrew.sections.law.books;
-        const total = lawBooks.reduce((s, b) => s + b.chapters, 0);
-        const read = lawBooks.reduce((s, b) => s + Object.keys(p[b.id] || {}).length, 0);
-        return Math.round((read / total) * 100);
-      },
+      }
     },
   ];
 
-  // Recent family activity (merged and sorted)
-  const recentActivity = sortedMembers.flatMap(({ uid, profile, progress }) =>
-    getRecentActivity(progress, 5).map((item) => ({ ...item, uid, displayName: profile.displayName, photoURL: profile.photoURL }))
-  ).sort((a, b) => new Date(b.dateStr) - new Date(a.dateStr)).slice(0, 10);
-
   return (
     <div style={{ paddingBottom: 16 }}>
-      <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 14, fontFamily: "Georgia, serif", fontStyle: "italic" }}>
+      <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 14, fontStyle: "italic" }}>
         {familyGroup.name} · {sortedMembers.length} members
       </div>
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        {[["overall", "Overall"], ["sections", "Sections"], ["activity", "Activity"]].map(([id, label]) => (
+        {[["members", "Members"], ["sections", "Sections"], ["activity", "Activity"]].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{
-            flex: 1, padding: "7px 0", borderRadius: 10, fontSize: 12,
+            flex: 1, padding: "7px 0", borderRadius: 10, fontSize: 12, fontWeight: tab === id ? 700 : 400,
             background: tab === id ? "var(--accent)" : "var(--surface)",
             color: tab === id ? "var(--bg)" : "var(--text-muted)",
             border: `1px solid ${tab === id ? "var(--accent)" : "var(--border)"}`,
-            cursor: "pointer", fontFamily: "Georgia, serif", fontWeight: tab === id ? "bold" : "normal",
+            cursor: "pointer",
           }}>{label}</button>
         ))}
       </div>
 
-      {/* Overall leaderboard */}
-      {tab === "overall" && (
-        <Card>
-          <div style={{ fontSize: 11, color: "var(--accent)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 14 }}>
-            Full Bible Progress
-          </div>
-          {sortedMembers.map(({ uid, profile, progress }, i) => (
-            <MemberProgressRow
-              key={uid}
-              profile={profile}
-              progress={progress}
-              isCurrentUser={uid === currentUid}
-              rank={i}
-            />
-          ))}
-        </Card>
-      )}
+      {/* Members tab — streaks & pace prominent */}
+      {tab === "members" && sortedMembers.map(({ uid, profile, progress }, i) => (
+        <MemberCard
+          key={uid} profile={profile} progress={progress}
+          isCurrentUser={uid === currentUid} rank={i}
+        />
+      ))}
 
-      {/* Section comparison */}
+      {/* Sections tab */}
       {tab === "sections" && (
         <Card style={{ overflowX: "auto" }}>
-          <div style={{ fontSize: 11, color: "var(--accent)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: "var(--accent)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>
             Section Comparison
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <thead>
               <tr>
-                <td style={{ color: "var(--text-muted)", padding: "4px 0", width: 70 }}></td>
+                <td style={{ color: "var(--text-muted)", padding: "4px 0", width: 70 }} />
                 {sortedMembers.map(({ uid, profile }) => (
-                  <td key={uid} style={{ color: uid === currentUid ? "var(--accent-light)" : "var(--text)", textAlign: "center", padding: "4px 4px", fontFamily: "Georgia, serif" }}>
+                  <td key={uid} style={{ color: uid === currentUid ? "var(--accent-light)" : "var(--text)", textAlign: "center", padding: "4px 4px", fontWeight: 700 }}>
                     {profile.displayName.split(" ")[0]}
                   </td>
                 ))}
@@ -177,20 +191,41 @@ export default function Family({ currentUid, familyGroup, currentProgress }) {
                           fontSize: 11, padding: "2px 6px", borderRadius: 6,
                           background: val === 100 ? "rgba(90,158,111,0.2)" : "var(--surface)",
                           color: val === 100 ? "var(--green)" : uid === currentUid ? "var(--accent)" : "var(--text)",
-                        }}>
-                          {val}%
-                        </span>
+                          fontWeight: uid === currentUid ? 700 : 400,
+                        }}>{val}%</span>
                       </td>
                     );
                   })}
                 </tr>
               ))}
+              {/* Streak row */}
+              <tr style={{ borderTop: "1px solid var(--border)" }}>
+                <td style={{ color: "var(--text-muted)", padding: "6px 0", fontSize: 11 }}>Streak 🔥</td>
+                {sortedMembers.map(({ uid, streak }) => (
+                  <td key={uid} style={{ textAlign: "center", padding: "6px 4px" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: streak > 0 ? "var(--accent)" : "var(--text-muted)" }}>
+                      {streak}d
+                    </span>
+                  </td>
+                ))}
+              </tr>
+              {/* Pace row */}
+              <tr style={{ borderTop: "1px solid var(--border)" }}>
+                <td style={{ color: "var(--text-muted)", padding: "6px 0", fontSize: 11 }}>Pace/day</td>
+                {sortedMembers.map(({ uid, pace }) => (
+                  <td key={uid} style={{ textAlign: "center", padding: "6px 4px" }}>
+                    <span style={{ fontSize: 11, fontWeight: uid === currentUid ? 700 : 400, color: uid === currentUid ? "var(--accent)" : "var(--text)" }}>
+                      {pace}
+                    </span>
+                  </td>
+                ))}
+              </tr>
             </tbody>
           </table>
         </Card>
       )}
 
-      {/* Activity feed */}
+      {/* Activity tab */}
       {tab === "activity" && (
         <>
           <Divider label="Recent Family Activity" />
@@ -205,10 +240,8 @@ export default function Family({ currentUid, familyGroup, currentProgress }) {
               <div key={i} style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: "1px solid var(--border)", alignItems: "center" }}>
                 <Avatar name={item.displayName} photoURL={item.photoURL} size={32} />
                 <div style={{ flex: 1 }}>
-                  <div>
-                    <span style={{ fontSize: 13, color: "var(--accent-light)", fontFamily: "Georgia, serif" }}>{item.displayName} </span>
-                    <span style={{ fontSize: 13, color: "var(--text)" }}>read {book?.name} {item.chapter}</span>
-                  </div>
+                  <span style={{ fontSize: 13, color: "var(--accent-light)", fontWeight: 600 }}>{item.displayName} </span>
+                  <span style={{ fontSize: 13, color: "var(--text)" }}>read {book?.name} {item.chapter}</span>
                   <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{formatDate(item.dateStr)}</div>
                 </div>
               </div>

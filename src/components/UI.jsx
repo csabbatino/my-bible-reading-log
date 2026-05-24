@@ -19,13 +19,13 @@ export function ProgressRing({ pct, size = 80, stroke = 7, color, label, sub, on
         />
         <text
           x="50%" y="50%" textAnchor="middle" dominantBaseline="middle"
-          fill="var(--text)" fontSize={size * 0.19} fontFamily="Georgia, serif"
+          fill="var(--text)" fontSize={size * 0.19} fontFamily="Nunito, system-ui, sans-serif"
           style={{ transform: "rotate(90deg)", transformOrigin: "center" }}
         >
           {pct}%
         </text>
       </svg>
-      {label && <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center", fontFamily: "Georgia, serif" }}>{label}</div>}
+      {label && <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center", fontFamily: "'Nunito', system-ui, sans-serif" }}>{label}</div>}
       {sub && <div style={{ fontSize: 10, color: "var(--text-muted)", textAlign: "center" }}>{sub}</div>}
     </div>
   );
@@ -73,7 +73,7 @@ export function Card({ children, style = {}, onClick }) {
 export function Button({ children, onClick, variant = "primary", small, disabled, style = {} }) {
   const base = {
     borderRadius: small ? 8 : 12, padding: small ? "6px 12px" : "12px 20px",
-    fontSize: small ? 12 : 14, fontFamily: "Georgia, serif",
+    fontSize: small ? 12 : 14, fontFamily: "'Nunito', system-ui, sans-serif",
     border: "none", cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.5 : 1, transition: "opacity 0.15s",
     fontWeight: "bold", ...style,
@@ -134,7 +134,7 @@ export function Avatar({ name, photoURL, size = 36 }) {
       width: size, height: size, borderRadius: size / 2,
       background: "var(--card)", border: "2px solid var(--accent)",
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.42, color: "var(--accent-light)", fontFamily: "Georgia, serif",
+      fontSize: size * 0.42, color: "var(--accent-light)", fontFamily: "'Nunito', system-ui, sans-serif",
     }}>
       {(name || "?")[0].toUpperCase()}
     </div>
@@ -149,7 +149,7 @@ export function Toast({ message, type = "success" }) {
       position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
       background: type === "success" ? "var(--green)" : "var(--danger)",
       color: "#fff", padding: "10px 20px", borderRadius: 20,
-      fontSize: 13, fontFamily: "Georgia, serif", zIndex: 1000,
+      fontSize: 13, fontFamily: "'Nunito', system-ui, sans-serif", zIndex: 1000,
       boxShadow: "0 4px 20px rgba(0,0,0,0.3)", animation: "fadeIn 0.2s ease",
     }}>
       {message}
@@ -172,7 +172,7 @@ export function Modal({ isOpen, onClose, title, children }) {
         maxHeight: "80vh", overflowY: "auto",
       }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 16, color: "var(--text)", fontFamily: "Georgia, serif", fontWeight: "bold" }}>{title}</div>
+          <div style={{ fontSize: 16, color: "var(--text)", fontFamily: "'Nunito', system-ui, sans-serif", fontWeight: "bold" }}>{title}</div>
           <div onClick={onClose} style={{ fontSize: 20, color: "var(--text-muted)", cursor: "pointer", padding: "0 4px" }}>✕</div>
         </div>
         {children}
