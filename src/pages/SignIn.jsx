@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signInWithGoogle, signInWithApple } from "../utils/firebase.js";
+import { signInWithGoogle } from "../utils/firebase.js";
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
