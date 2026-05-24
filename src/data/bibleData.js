@@ -13,18 +13,28 @@ export const BIBLE_DATA = {
           { id: "deu", name: "Deuteronomy", chapters: 34 },
         ],
       },
-      history: {
-        label: "History",
+      promisedLand: {
+        label: "Israel Enters the Promised Land",
         books: [
           { id: "jos", name: "Joshua", chapters: 24 },
           { id: "jdg", name: "Judges", chapters: 21 },
           { id: "rut", name: "Ruth", chapters: 4 },
+        ],
+      },
+      kings: {
+        label: "When the Kings Ruled Israel",
+        books: [
           { id: "1sa", name: "1 Samuel", chapters: 31 },
           { id: "2sa", name: "2 Samuel", chapters: 24 },
           { id: "1ki", name: "1 Kings", chapters: 22 },
           { id: "2ki", name: "2 Kings", chapters: 25 },
           { id: "1ch", name: "1 Chronicles", chapters: 29 },
           { id: "2ch", name: "2 Chronicles", chapters: 36 },
+        ],
+      },
+      exile: {
+        label: "The Jews Return from Exile",
+        books: [
           { id: "ezr", name: "Ezra", chapters: 10 },
           { id: "neh", name: "Nehemiah", chapters: 13 },
           { id: "est", name: "Esther", chapters: 10 },
@@ -91,8 +101,8 @@ export const BIBLE_DATA = {
           { id: "joh", name: "John", chapters: 21 },
         ],
       },
-      historyNT: {
-        label: "History",
+      earlyCongregation: {
+        label: "Early Christian Congregation",
         books: [
           { id: "act", name: "Acts", chapters: 28 },
         ],
@@ -113,12 +123,12 @@ export const BIBLE_DATA = {
           { id: "2ti", name: "2 Timothy", chapters: 4 },
           { id: "tit", name: "Titus", chapters: 3 },
           { id: "phm", name: "Philemon", chapters: 1 },
+          { id: "heb", name: "Hebrews", chapters: 13 },
         ],
       },
       generalLetters: {
-        label: "General Letters",
+        label: "Writings of Other Apostles & Disciples",
         books: [
-          { id: "heb", name: "Hebrews", chapters: 13 },
           { id: "jas", name: "James", chapters: 5 },
           { id: "1pe", name: "1 Peter", chapters: 5 },
           { id: "2pe", name: "2 Peter", chapters: 3 },
@@ -175,7 +185,8 @@ export function getBookTestament(bookId) {
 export function getBookSection(bookId) {
   for (const [testament, data] of Object.entries(BIBLE_DATA)) {
     for (const [sectionKey, section] of Object.entries(data.sections)) {
-      if (section.books.find((b) => b.id === bookId)) return { sectionKey, section, testament };
+      if (section.books.find((b) => b.id === bookId))
+        return { sectionKey, section, testament };
     }
   }
   return null;
