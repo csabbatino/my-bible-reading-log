@@ -7,6 +7,7 @@ import {
 import { getFamilyFeedItems } from "./utils/goals.js";
 import { applyTheme } from "./data/themes.js";
 import { BOOK_MAP } from "./data/bibleData.js";
+import { HomeIcon, BookIcon, FamilyIcon, SettingsIcon, BackIcon } from "./components/Icons.jsx";
 
 import SignIn from "./pages/SignIn.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
@@ -17,10 +18,10 @@ import Settings from "./pages/Settings.jsx";
 import { Spinner, Toast } from "./components/UI.jsx";
 
 const NAV = [
-  { id: "dashboard", icon: "🏠", label: "Home" },
-  { id: "books", icon: "📖", label: "Books" },
-  { id: "family", icon: "👨‍👩‍👧", label: "Family" },
-  { id: "settings", icon: "⚙️", label: "Settings" },
+  { id: "dashboard", Icon: HomeIcon, label: "Home" },
+  { id: "books", Icon: BookIcon, label: "Books" },
+  { id: "family", Icon: FamilyIcon, label: "Family" },
+  { id: "settings", Icon: SettingsIcon, label: "Settings" },
 ];
 
 export default function App() {
@@ -35,7 +36,6 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [pageHistory, setPageHistory] = useState([]);
 
-  // Auth listener
   useEffect(() => {
     const unsub = onAuthChange(async (user) => {
       setAuthUser(user);
@@ -51,7 +51,6 @@ export default function App() {
     return unsub;
   }, []);
 
-  // Profile listener
   useEffect(() => {
     if (!authUser?.uid) return;
     const unsub = listenToUserProfile(authUser.uid, (prof) => {
@@ -60,14 +59,12 @@ export default function App() {
     return unsub;
   }, [authUser?.uid]);
 
-  // Progress listener
   useEffect(() => {
     if (!authUser?.uid) return;
     const unsub = listenToAllProgress(authUser.uid, setProgress);
     return unsub;
   }, [authUser?.uid]);
 
-  // Family group listener + feed
   useEffect(() => {
     if (!profile?.familyGroupId) { setFamilyGroup(null); setFamilyFeedItems([]); return; }
     const unsub = listenToFamilyGroup(profile.familyGroupId, async (group) => {
@@ -83,11 +80,6 @@ export default function App() {
     });
     return unsub;
   }, [profile?.familyGroupId]);
-
-  const showToast = useCallback((msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  }, []);
 
   const navigate = useCallback((page, params = {}) => {
     setPageHistory((h) => [...h, { page: currentPage, params: pageParams }]);
@@ -142,24 +134,33 @@ export default function App() {
   const showBack = pageHistory.length > 0;
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", position: "relative" }}>
+    <div style={{
+      maxWidth: 480, margin: "0 auto", minHeight: "100vh",
+      background: "var(--bg)", display: "flex", flexDirection: "column",
+      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+    }}>
       {/* Top bar */}
       <div style={{
         position: "sticky", top: 0, zIndex: 100,
         background: "var(--nav-bg)", borderBottom: "1px solid var(--border)",
-        padding: "10px 16px 8px",
+        padding: "10px 16px 10px",
       }}>
-        <div style={{ fontSize: 10, color: "var(--accent)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 2 }}>
+        <div style={{ fontSize: 10, color: "var(--accent)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 3, fontWeight: 600 }}>
           My Bible Reading Log
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {showBack && (
             <button onClick={goBack} style={{
-              background: "transparent", border: "none", color: "var(--accent)",
-              fontSize: 20, cursor: "pointer", padding: "0 4px 0 0", lineHeight: 1,
-            }}>‹</button>
+              background: "transparent", border: "none", color: "var(--text-muted)",
+              cursor: "pointer", padding: "0 4px 0 0", display: "flex", alignItems: "center",
+            }}>
+              <BackIcon size={20} />
+            </button>
           )}
-          <h1 style={{ margin: 0, fontSize: 18, color: "var(--text)", fontFamily: "Georgia, serif", fontWeight: "bold" }}>
+          <h1 style={{
+            margin: 0, fontSize: 18, color: "var(--text)",
+            fontWeight: 600, letterSpacing: "-0.3px",
+          }}>
             {pageTitles[currentPage]}
           </h1>
         </div>
@@ -200,22 +201,21 @@ export default function App() {
       <div style={{
         position: "sticky", bottom: 0,
         background: "var(--nav-bg)", borderTop: "1px solid var(--border)",
-        padding: "8px 0 12px", display: "flex", justifyContent: "space-around", zIndex: 100,
+        padding: "8px 0 16px", display: "flex", justifyContent: "space-around", zIndex: 100,
       }}>
-        {NAV.map(({ id, icon, label }) => {
+        {NAV.map(({ id, Icon, label }) => {
           const isActive = currentPage === id || (id === "books" && currentPage === "chapters");
           return (
             <button key={id} onClick={() => handleNavClick(id)} style={{
               display: "flex", flexDirection: "column", alignItems: "center",
-              gap: 3, background: "transparent", border: "none", cursor: "pointer", padding: "4px 16px",
+              gap: 4, background: "transparent", border: "none", cursor: "pointer", padding: "4px 20px",
             }}>
-              <span style={{ fontSize: 20 }}>{icon}</span>
+              <Icon size={22} color={isActive ? "var(--accent)" : "var(--text-muted)"} />
               <span style={{
-                fontSize: 10, fontFamily: "Georgia, serif",
+                fontSize: 10, fontWeight: isActive ? 600 : 400,
                 color: isActive ? "var(--accent)" : "var(--text-muted)",
-                fontWeight: isActive ? "bold" : "normal",
+                letterSpacing: "0.2px",
               }}>{label}</span>
-              {isActive && <div style={{ width: 4, height: 4, borderRadius: 2, background: "var(--accent)" }} />}
             </button>
           );
         })}
@@ -224,10 +224,11 @@ export default function App() {
       {toast && <Toast message={toast.msg} type={toast.type} />}
 
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         * { box-sizing: border-box; }
-        body { margin: 0; background: var(--bg); }
+        body { margin: 0; background: var(--bg); font-family: 'Inter', system-ui, sans-serif; }
         :root {
           --bg: #1a1208; --surface: #2a1f0e; --card: #332615;
           --accent: #c9a84c; --accent-light: #e8c97a;
@@ -236,7 +237,7 @@ export default function App() {
           --border: #4a3820; --hebrew: #8b6fd6; --greek: #4a9fd6;
           --danger: #c0392b; --nav-bg: #2a1f0e;
         }
-        input, textarea, button { font-family: Georgia, serif; }
+        input, textarea, button { font-family: 'Inter', system-ui, sans-serif; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
