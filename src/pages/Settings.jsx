@@ -5,9 +5,10 @@ import {
   updateUserProfile, signOutUser,
   createFamilyGroup, addMemberToGroup, removeMemberFromGroup,
 } from "../utils/firebase.js";
+import { addPendingInvitation } from "../utils/goals.js";
 import { requestNotificationPermission, disableNotifications } from "../utils/goals.js";
 
-export default function Settings({ profile, familyGroup, memberProfiles, onThemeChange, onSignOut }) {
+export default function Settings({ profile, familyGroup, memberProfiles, onThemeChange, onSignOut, onRetakeTour }) {
   const [addEmail, setAddEmail] = useState("");
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState("");
@@ -28,7 +29,14 @@ export default function Settings({ profile, familyGroup, memberProfiles, onTheme
       await addMemberToGroup(familyGroup.id, addEmail.trim().toLowerCase());
       setAddEmail("");
     } catch (e) {
-      setAddError(e.message);
+      // If user not found, save as pending invitation
+      if (e.message.includes("No user found")) {
+        await addPendingInvitation(familyGroup.id, addEmail.trim().toLowerCase());
+        setAddEmail("");
+        setAddError("No account found yet — invitation saved. They'll be added automatically when they sign in.");
+      } else {
+        setAddError(e.message);
+      }
     } finally {
       setAddLoading(false);
     }
@@ -250,10 +258,16 @@ export default function Settings({ profile, familyGroup, memberProfiles, onTheme
                 {addLoading ? "…" : "Add"}
               </Button>
             </div>
-            {addError && <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 8 }}>{addError}</div>}
+            {addError && <div style={{ fontSize: 12, color: addError.includes("invitation saved") ? "var(--accent)" : "var(--danger)", marginTop: 8 }}>{addError}</div>}
           </Card>
         </>
       )}
+
+      {/* Take the tour */}
+      <Divider label="Help" />
+      <Button onClick={onRetakeTour} variant="ghost" style={{ width: "100%", marginBottom: 8 }}>
+        Take the Tour Again
+      </Button>
 
       {/* Sign out */}
       <Divider />

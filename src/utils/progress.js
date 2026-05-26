@@ -1,4 +1,4 @@
-import { BIBLE_DATA, TOTAL_CHAPTERS, HEBREW_CHAPTERS, GREEK_CHAPTERS, ALL_BOOKS } from "../data/bibleData.js";
+import { BIBLE_DATA, TOTAL_CHAPTERS, HEBREW_CHAPTERS, GREEK_CHAPTERS } from "../data/bibleData.js";
 
 export function countReadChapters(progress) {
   let total = 0;
@@ -41,6 +41,18 @@ export function greekPct(progress) {
   return Math.round((read / GREEK_CHAPTERS) * 100);
 }
 
+// Always use local date to avoid timezone bugs
+export function localDateStr(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function todayStr() {
+  return localDateStr(new Date());
+}
+
 export function getCurrentStreak(progress) {
   const readDates = new Set();
   for (const bookProgress of Object.values(progress)) {
@@ -48,12 +60,13 @@ export function getCurrentStreak(progress) {
       if (dateStr) readDates.add(dateStr);
     }
   }
+
   let streak = 0;
   const today = new Date();
   for (let i = 0; i < 365; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = localDateStr(d);
     if (readDates.has(dateStr)) {
       streak++;
     } else if (i > 0) {
@@ -64,7 +77,6 @@ export function getCurrentStreak(progress) {
 }
 
 export function calculateLongestStreak(progress) {
-  // Build sorted list of all unique read dates
   const readDates = new Set();
   for (const bookProgress of Object.values(progress)) {
     for (const dateStr of Object.values(bookProgress)) {
@@ -78,8 +90,8 @@ export function calculateLongestStreak(progress) {
   let current = 1;
 
   for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i - 1]);
-    const curr = new Date(sorted[i]);
+    const prev = new Date(sorted[i - 1] + "T12:00:00");
+    const curr = new Date(sorted[i] + "T12:00:00");
     const diffDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
     if (diffDays === 1) {
       current++;
@@ -104,17 +116,14 @@ export function getRecentActivity(progress, limit = 10) {
 
 export function formatDate(dateStr) {
   if (!dateStr) return "";
-  const d = new Date(dateStr + "T00:00:00");
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  if (dateStr === today.toISOString().split("T")[0]) return "Today";
-  if (dateStr === yesterday.toISOString().split("T")[0]) return "Yesterday";
+  const d = new Date(dateStr + "T12:00:00");
+  const todayS = todayStr();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayS = localDateStr(yesterday);
+  if (dateStr === todayS) return "Today";
+  if (dateStr === yesterdayS) return "Yesterday";
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-export function todayStr() {
-  return new Date().toISOString().split("T")[0];
 }
 
 export function pctForPsalmsBook(progress, subBook) {
@@ -130,8 +139,8 @@ export function getSevenDayPace(progress) {
   const today = new Date();
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 6);
-  const fromStr = sevenDaysAgo.toISOString().split("T")[0];
-  const toStr = today.toISOString().split("T")[0];
+  const fromStr = localDateStr(sevenDaysAgo);
+  const toStr = localDateStr(today);
   let count = 0;
   for (const bookProgress of Object.values(progress)) {
     for (const dateStr of Object.values(bookProgress)) {

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Checkbox, ProgressBar, Button, Modal, Badge, Divider, Spinner } from "../components/UI.jsx";
 import { markChapterRead, unmarkChapter, saveNote, listenToBookNotes } from "../utils/firebase.js";
-import { getEarnedBadges, saveEarnedBadges } from "../utils/goals.js";
-import { checkNewBadges } from "../data/badges.js";
+import { getEarnedBadges, saveEarnedBadges, sendFamilyNotification } from "../utils/goals.js";
+import { checkNewBadges, shouldNotifyFamily, getFamilyNotificationMessage } from "../data/badges.js";
 import { todayStr, formatDate, pctForPsalmsBook } from "../utils/progress.js";
 import { BOOK_MAP } from "../data/bibleData.js";
 import { BOOK_INFO } from "../data/bookInfo.js";
@@ -170,7 +170,7 @@ function ChapterRow({ bookId, chapter, isRead, dateStr, note, onToggle, onDateCh
   );
 }
 
-export default function Chapters({ uid, bookId, progress, onNavigate, familyMemberUids = [] }) {
+export default function Chapters({ uid, bookId, progress, onNavigate, familyGroupId, familyMemberUids = [] }) {
   const book = BOOK_MAP[bookId];
   const [notes, setNotes] = useState({});
   const [noteModal, setNoteModal] = useState(null);
@@ -193,9 +193,22 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyMemb
       if (fresh.length > 0) {
         await saveEarnedBadges(uid, [...earned, ...fresh.map((b) => b.id)]);
         setNewBadges(fresh);
+        // Send family notifications for qualifying badges
+        if (familyGroupId) {
+          const { getDoc, doc } = await import("firebase/firestore");
+          const { db } = await import("../utils/firebase.js");
+          const userSnap = await getDoc(doc(db, "users", uid));
+          const displayName = userSnap.exists() ? userSnap.data().displayName || "A family member" : "A family member";
+          for (const badge of fresh) {
+            if (shouldNotifyFamily(badge)) {
+              const msg = getFamilyNotificationMessage(badge, displayName);
+              if (msg) await sendFamilyNotification(familyGroupId, uid, msg.title, msg.body);
+            }
+          }
+        }
       }
     } catch (e) { console.error("Badge check failed:", e); }
-  }, [uid, progress]);
+  }, [uid, progress, familyGroupId]);
 
   useEffect(() => { if (uid && progress) checkBadges(); }, [progress]);
 

@@ -4,10 +4,19 @@ import {
   listenToAllProgress, listenToUserProfile,
   listenToFamilyGroup, getMembersProfiles,
 } from "./utils/firebase.js";
-import { getFamilyFeedItems } from "./utils/goals.js";
+import {
+  getFamilyFeedItems,
+  hasTourBeenCompleted, resetTour,
+  shouldShowStreakEndedMessage, markStreakEndedMessageShown, clearStreakEndedFlag,
+  checkAndAcceptPendingInvitation,
+  updateLongestStreak,
+} from "./utils/goals.js";
+import { getCurrentStreak, calculateLongestStreak } from "./utils/progress.js";
 import { applyTheme } from "./data/themes.js";
 import { BOOK_MAP } from "./data/bibleData.js";
 import { HomeIcon, BookIcon, FamilyIcon, SettingsIcon, BackIcon } from "./components/Icons.jsx";
+import { Spinner, Toast, Modal, Button } from "./components/UI.jsx";
+import GuidedTour from "./components/GuidedTour.jsx";
 
 import SignIn from "./pages/SignIn.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
@@ -15,7 +24,6 @@ import Books from "./pages/Books.jsx";
 import Chapters from "./pages/Chapters.jsx";
 import Family from "./pages/Family.jsx";
 import Settings from "./pages/Settings.jsx";
-import { Spinner, Toast } from "./components/UI.jsx";
 
 const NAV = [
   { id: "dashboard", Icon: HomeIcon, label: "Home" },
@@ -35,7 +43,10 @@ export default function App() {
   const [pageParams, setPageParams] = useState({});
   const [toast, setToast] = useState(null);
   const [pageHistory, setPageHistory] = useState([]);
+  const [showTour, setShowTour] = useState(false);
+  const [streakEndedMsg, setStreakEndedMsg] = useState(null);
 
+  // Auth listener
   useEffect(() => {
     const unsub = onAuthChange(async (user) => {
       setAuthUser(user);
@@ -43,6 +54,15 @@ export default function App() {
         const prof = await getOrCreateUserProfile(user);
         setProfile(prof);
         applyTheme(prof.theme || "parchment");
+
+        // Check for pending invitation
+        if (user.email && !prof.familyGroupId) {
+          await checkAndAcceptPendingInvitation(user.uid, user.email);
+        }
+
+        // Check if tour needs to be shown
+        const tourDone = await hasTourBeenCompleted(user.uid);
+        if (!tourDone) setShowTour(true);
       } else {
         setProfile(null);
         applyTheme("parchment");
@@ -51,6 +71,7 @@ export default function App() {
     return unsub;
   }, []);
 
+  // Profile listener
   useEffect(() => {
     if (!authUser?.uid) return;
     const unsub = listenToUserProfile(authUser.uid, (prof) => {
@@ -59,12 +80,14 @@ export default function App() {
     return unsub;
   }, [authUser?.uid]);
 
+  // Progress listener
   useEffect(() => {
     if (!authUser?.uid) return;
     const unsub = listenToAllProgress(authUser.uid, setProgress);
     return unsub;
   }, [authUser?.uid]);
 
+  // Family group listener
   useEffect(() => {
     if (!profile?.familyGroupId) { setFamilyGroup(null); setFamilyFeedItems([]); return; }
     const unsub = listenToFamilyGroup(profile.familyGroupId, async (group) => {
@@ -80,6 +103,33 @@ export default function App() {
     });
     return unsub;
   }, [profile?.familyGroupId]);
+
+  // Check streak ended message after progress loads
+  useEffect(() => {
+    if (!authUser?.uid || Object.keys(progress).length === 0) return;
+    const check = async () => {
+      const streak = getCurrentStreak(progress);
+      const longest = calculateLongestStreak(progress);
+
+      // Update longest streak in Firebase
+      await updateLongestStreak(authUser.uid, Math.max(streak, longest));
+
+      // If streak is 0 but they had a longest streak, check if we need to show ended message
+      if (streak === 0 && longest > 0) {
+        const shouldShow = await shouldShowStreakEndedMessage(authUser.uid, longest);
+        if (shouldShow) {
+          setStreakEndedMsg({ longest });
+          await markStreakEndedMessageShown(authUser.uid, longest);
+        }
+      }
+
+      // If streak > 0, clear the ended flag so it can fire again if broken later
+      if (streak > 0) {
+        await clearStreakEndedFlag(authUser.uid);
+      }
+    };
+    check();
+  }, [authUser?.uid, progress]);
 
   const navigate = useCallback((page, params = {}) => {
     setPageHistory((h) => [...h, { page: currentPage, params: pageParams }]);
@@ -111,6 +161,14 @@ export default function App() {
     setFamilyGroup(null);
     setFamilyFeedItems([]);
     setCurrentPage("dashboard");
+    setShowTour(false);
+    setStreakEndedMsg(null);
+  };
+
+  const handleRetakeTour = async () => {
+    await resetTour(authUser.uid);
+    setShowTour(true);
+    handleNavClick("dashboard");
   };
 
   if (authUser === undefined) {
@@ -146,21 +204,15 @@ export default function App() {
         padding: "10px 16px 10px",
       }}>
         <div style={{ fontSize: 10, color: "var(--accent)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 3, fontWeight: 600 }}>
-          My Bible Reading Log
+          Daily Bible Reading Log
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {showBack && (
-            <button onClick={goBack} style={{
-              background: "transparent", border: "none", color: "var(--text-muted)",
-              cursor: "pointer", padding: "0 4px 0 0", display: "flex", alignItems: "center",
-            }}>
+            <button onClick={goBack} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "0 4px 0 0", display: "flex", alignItems: "center" }}>
               <BackIcon size={20} />
             </button>
           )}
-          <h1 style={{
-            margin: 0, fontSize: 18, color: "var(--text)",
-            fontWeight: 600, letterSpacing: "-0.3px",
-          }}>
+          <h1 style={{ margin: 0, fontSize: 18, color: "var(--text)", fontWeight: 600, letterSpacing: "-0.3px" }}>
             {pageTitles[currentPage]}
           </h1>
         </div>
@@ -182,6 +234,7 @@ export default function App() {
           <Chapters
             uid={authUser.uid} bookId={pageParams.bookId}
             progress={progress} onNavigate={navigate}
+            familyGroupId={familyGroup?.id}
             familyMemberUids={familyGroup?.members || []}
           />
         )}
@@ -193,6 +246,7 @@ export default function App() {
             profile={profile} familyGroup={familyGroup} memberProfiles={memberProfiles}
             onThemeChange={(themeId) => setProfile((p) => ({ ...p, theme: themeId }))}
             onSignOut={handleSignOut}
+            onRetakeTour={handleRetakeTour}
           />
         )}
       </div>
@@ -211,31 +265,68 @@ export default function App() {
               gap: 4, background: "transparent", border: "none", cursor: "pointer", padding: "4px 20px",
             }}>
               <Icon size={22} color={isActive ? "var(--accent)" : "var(--text-muted)"} />
-              <span style={{
-                fontSize: 10, fontWeight: isActive ? 600 : 400,
-                color: isActive ? "var(--accent)" : "var(--text-muted)",
-                letterSpacing: "0.2px",
-              }}>{label}</span>
+              <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 400, color: isActive ? "var(--accent)" : "var(--text-muted)", letterSpacing: "0.2px" }}>
+                {label}
+              </span>
             </button>
           );
         })}
       </div>
 
+      {/* Streak ended message */}
+      {streakEndedMsg && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 250,
+          background: "rgba(0,0,0,0.7)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+        }}>
+          <div style={{
+            background: "var(--surface)", borderRadius: 20, padding: "28px 24px",
+            maxWidth: 340, width: "100%", textAlign: "center",
+            border: "1px solid var(--border)",
+          }}>
+            <div style={{ fontSize: 40, marginBottom: 14 }}>🔥</div>
+            <div style={{ fontSize: 16, color: "var(--text)", fontWeight: 700, marginBottom: 12, lineHeight: 1.4 }}>
+              Your {streakEndedMsg.longest}-day streak ended. But don't give up. Your personal best is {streakEndedMsg.longest} days and you can start a new one today!
+            </div>
+            <button
+              onClick={() => setStreakEndedMsg(null)}
+              style={{
+                width: "100%", padding: "12px", borderRadius: 12, fontSize: 14, fontWeight: 700,
+                background: "var(--accent)", color: "var(--bg)", border: "none", cursor: "pointer",
+              }}
+            >
+              Start Fresh Today
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Guided tour */}
+      {showTour && !streakEndedMsg && (
+        <GuidedTour
+          uid={authUser.uid}
+          currentPage={currentPage}
+          onNavigate={navigate}
+          onComplete={() => setShowTour(false)}
+        />
+      )}
+
       {toast && <Toast message={toast.msg} type={toast.type} />}
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swapdisplay=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--bg); font-family: 'Nunito', system-ui, sans-serif; }
         :root {
-          --bg: #1a1208; --surface: #2a1f0e; --card: #332615;
-          --accent: #c9a84c; --accent-light: #e8c97a;
-          --text: #f0e6d0; --text-muted: #9a8a6a;
-          --green: #5a9e6f; --green-light: #7bc490;
-          --border: #4a3820; --hebrew: #8b6fd6; --greek: #4a9fd6;
-          --danger: #c0392b; --nav-bg: #2a1f0e;
+          --bg: #f5ead0; --surface: #ede0c0; --card: #e8d5a8;
+          --accent: #b8892a; --accent-light: #d4a840;
+          --text: #3d2b0e; --text-muted: #7a5c2e;
+          --green: #4a7c3f; --green-light: #6a9e5f;
+          --border: #c8a96e; --hebrew: #7055b0; --greek: #2878b0;
+          --danger: #c0392b; --nav-bg: #ede0c0;
         }
         input, textarea, button { font-family: 'Nunito', system-ui, sans-serif; }
         ::-webkit-scrollbar { width: 4px; }

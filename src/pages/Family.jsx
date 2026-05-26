@@ -144,7 +144,7 @@ export default function Family({ currentUid, familyGroup, currentProgress }) {
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        {[["members", "Members"], ["sections", "Sections"], ["activity", "Activity"]].map(([id, label]) => (
+        {[["members", "Members"], ["sections", "Progress"], ["activity", "Activity"]].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{
             flex: 1, padding: "7px 0", borderRadius: 10, fontSize: 12, fontWeight: tab === id ? 700 : 400,
             background: tab === id ? "var(--accent)" : "var(--surface)",
