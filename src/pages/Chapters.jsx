@@ -120,12 +120,14 @@ function ChapterRow({ bookId, chapter, isRead, dateStr, note, onToggle, onDateCh
   const isFirstChapter = chapter === 1;
 
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "10px 10px",
-      borderRadius: 10, marginBottom: 5,
-      background: isRead ? "rgba(90,158,111,0.1)" : "var(--card)",
-      border: `1px solid ${isRead ? "var(--green)" : "var(--border)"}`,
-    }}>
+    <div
+      id={isFirstChapter ? "tour-notes" : undefined}
+      style={{
+        display: "flex", alignItems: "center", gap: 10, padding: "10px 10px",
+        borderRadius: 10, marginBottom: 5,
+        background: isRead ? "rgba(90,158,111,0.1)" : "var(--card)",
+        border: `1px solid ${isRead ? "var(--green)" : "var(--border)"}`,
+      }}>
       <Checkbox checked={isRead} onChange={onToggle} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -164,7 +166,7 @@ function ChapterRow({ bookId, chapter, isRead, dateStr, note, onToggle, onDateCh
         )}
       </div>
       {isRead && (
-        <div id={isFirstChapter ? "tour-notes" : undefined} onClick={onNoteClick} style={{ fontSize: 18, cursor: "pointer", opacity: note?.text ? 1 : 0.3, padding: "0 4px" }}>
+        <div onClick={onNoteClick} style={{ fontSize: 18, cursor: "pointer", opacity: note?.text ? 1 : 0.3, padding: "0 4px" }}>
           {note?.text ? (note.isPublic ? "💬" : "📝") : "📝"}
         </div>
       )}
