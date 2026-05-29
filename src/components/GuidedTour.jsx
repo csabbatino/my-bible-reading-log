@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { markTourCompleted } from "../utils/goals.js";
 
 const TOUR_STEPS = [
@@ -16,16 +16,17 @@ const TOUR_STEPS = [
 ];
 
 const DEMO_BOOK_ID = "gen";
+const PAD = 7; // px padding around the spotlight target
 
 export default function GuidedTour({ uid, currentPage, onNavigate, onComplete }) {
   const [stepIndex, setStepIndex] = useState(0);
-  const [spotlight, setSpotlight] = useState(null); // { top, left, width, height }
+  const [rect, setRect] = useState(null); // viewport-relative rect of the target
 
   const step = TOUR_STEPS[stepIndex];
   const isLast = stepIndex === TOUR_STEPS.length - 1;
-  const progress = Math.round(((stepIndex + 1) / TOUR_STEPS.length) * 100);
+  const progressPct = Math.round(((stepIndex + 1) / TOUR_STEPS.length) * 100);
 
-  // Navigate to the right screen when step changes
+  // Navigate to correct screen when step changes
   useEffect(() => {
     if (step.screen === "chapters" && currentPage !== "chapters") {
       onNavigate("chapters", { bookId: DEMO_BOOK_ID });
@@ -34,78 +35,101 @@ export default function GuidedTour({ uid, currentPage, onNavigate, onComplete })
     }
   }, [stepIndex]);
 
-  // Find the target element and compute spotlight rect
+  // Measure target element position (viewport-relative, so fixed positioning works)
   useEffect(() => {
+    setRect(null);
+    let cancelled = false;
     const tryFind = (attempts = 0) => {
+      if (cancelled) return;
       const el = document.getElementById(step.targetId);
       if (el) {
-        const r = el.getBoundingClientRect();
-        const scrollY = window.scrollY || 0;
-        // Scroll element into view with some breathing room
         el.scrollIntoView({ behavior: "smooth", block: "center" });
-        // Wait for scroll to settle then re-measure
+        // Re-measure after scroll settles
         setTimeout(() => {
-          const r2 = el.getBoundingClientRect();
-          setSpotlight({
-            top: r2.top + window.scrollY - 6,
-            left: r2.left - 6,
-            width: r2.width + 12,
-            height: r2.height + 12,
-          });
-        }, 350);
-      } else if (attempts < 10) {
+          if (cancelled) return;
+          const r = el.getBoundingClientRect();
+          setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+        }, 380);
+      } else if (attempts < 12) {
         setTimeout(() => tryFind(attempts + 1), 150);
-      } else {
-        setSpotlight(null);
       }
     };
-    setSpotlight(null);
     tryFind();
+    return () => { cancelled = true; };
   }, [stepIndex, currentPage]);
 
   const handleNext = async () => {
     if (isLast) { await markTourCompleted(uid); onComplete(); }
     else setStepIndex((i) => i + 1);
   };
-
   const handleSkip = async () => { await markTourCompleted(uid); onComplete(); };
 
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 300, pointerEvents: "none" }}>
-      {/* Dark overlay — full screen */}
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.78)", pointerEvents: "auto" }} onClick={() => {}} />
+  // Spotlight geometry (viewport-relative, used with position:fixed)
+  const sl = rect ? {
+    top:    rect.top    - PAD,
+    left:   rect.left   - PAD,
+    width:  rect.width  + PAD * 2,
+    height: rect.height + PAD * 2,
+  } : null;
 
-      {/* Spotlight cutout using box-shadow trick */}
-      {spotlight && (
+  // Build the four dark rectangles that surround the spotlight hole.
+  // All positioned fixed, all pointer-events:none so the target stays tappable.
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const rects = sl ? [
+    // top strip
+    { top: 0,                left: 0,       width: vw,       height: sl.top },
+    // bottom strip
+    { top: sl.top + sl.height, left: 0,     width: vw,       height: vh - sl.top - sl.height },
+    // left strip (between top and bottom)
+    { top: sl.top,           left: 0,       width: sl.left,  height: sl.height },
+    // right strip (between top and bottom)
+    { top: sl.top,           left: sl.left + sl.width, width: vw - sl.left - sl.width, height: sl.height },
+  ] : [
+    { top: 0, left: 0, width: vw, height: vh },
+  ];
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 400, pointerEvents: "none" }}>
+
+      {/* Four dark panels that frame the spotlight hole */}
+      {rects.map((r, i) => (
+        <div key={i} style={{
+          position: "fixed",
+          top: r.top, left: r.left, width: r.width, height: r.height,
+          background: "rgba(0,0,0,0.75)",
+          pointerEvents: "auto",
+        }} onClick={(e) => e.stopPropagation()} />
+      ))}
+
+      {/* Highlight border around the target */}
+      {sl && (
         <div style={{
-          position: "absolute",
-          top: spotlight.top,
-          left: spotlight.left,
-          width: spotlight.width,
-          height: spotlight.height,
-          borderRadius: 10,
-          boxShadow: "0 0 0 9999px rgba(0,0,0,0.78)",
-          border: "2px solid rgba(255,255,255,0.6)",
-          zIndex: 301,
+          position: "fixed",
+          top: sl.top, left: sl.left,
+          width: sl.width, height: sl.height,
+          borderRadius: 12,
+          border: "2.5px solid rgba(255,255,255,0.85)",
+          boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 24px rgba(255,255,255,0.15)",
           pointerEvents: "none",
-          transition: "all 0.3s ease",
+          zIndex: 401,
+          transition: "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease",
         }} />
       )}
 
-      {/* Tour card — fixed to bottom of viewport */}
+      {/* Tour card — fixed to bottom, above everything */}
       <div style={{
         position: "fixed", bottom: 90, left: 16, right: 16,
-        zIndex: 302, pointerEvents: "auto",
-        animation: "slideUp 0.3s ease",
+        zIndex: 402, pointerEvents: "auto",
       }}>
         <div style={{
           background: "var(--surface)", borderRadius: 20, padding: "20px",
           border: "1px solid var(--border)",
-          boxShadow: "0 -4px 40px rgba(0,0,0,0.4)",
+          boxShadow: "0 -4px 40px rgba(0,0,0,0.5)",
         }}>
-          {/* Progress bar */}
+          {/* Step progress bar */}
           <div style={{ height: 3, background: "var(--border)", borderRadius: 2, marginBottom: 16, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${progress}%`, background: "var(--accent)", borderRadius: 2, transition: "width 0.3s ease" }} />
+            <div style={{ height: "100%", width: `${progressPct}%`, background: "var(--accent)", borderRadius: 2, transition: "width 0.3s ease" }} />
           </div>
 
           <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
@@ -128,13 +152,6 @@ export default function GuidedTour({ uid, currentPage, onNavigate, onComplete })
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(30px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }

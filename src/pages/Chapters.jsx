@@ -264,20 +264,23 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyGrou
     <div style={{ paddingBottom: 16 }}>
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{readCount} of {book.chapters} chapters read</div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+            {readCount} of {book.chapters} chapters read
+            {pct < 100 && (
+              <>
+                {" · "}
+                <span
+                  onClick={() => { setMarkAllDate(todayStr()); setMarkAllModal(true); }}
+                  style={{ color: "var(--accent)", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 2, cursor: "pointer" }}
+                >
+                  Mark all as read
+                </span>
+              </>
+            )}
+          </div>
           <Badge color={pct === 100 ? "var(--green)" : "var(--accent)"}>{pct}%</Badge>
         </div>
         <ProgressBar pct={pct} color={pct === 100 ? "var(--green)" : "var(--accent)"} height={7} />
-        {pct < 100 && (
-          <div style={{ textAlign: "right", marginTop: 6 }}>
-            <button
-              onClick={() => { setMarkAllDate(todayStr()); setMarkAllModal(true); }}
-              style={{ background: "none", border: "none", padding: 0, fontSize: 11, color: "var(--text-muted)", cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3 }}
-            >
-              Mark all as read…
-            </button>
-          </div>
-        )}
       </div>
 
       <BookInfoPanel bookId={bookId} />

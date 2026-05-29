@@ -228,7 +228,7 @@ export default function App() {
           />
         )}
         {currentPage === "books" && (
-          <Books progress={progress} onNavigate={navigate} initialTestament={pageParams.testament} />
+          <Books progress={progress} onNavigate={navigate} initialTestament={pageParams.testament} uid={authUser.uid} />
         )}
         {currentPage === "chapters" && (
           <Chapters
