@@ -149,3 +149,15 @@ export function getSevenDayPace(progress) {
   }
   return Math.round((count / 7) * 10) / 10;
 }
+
+export function countHebrewRead(progress) {
+  return Object.values(BIBLE_DATA.hebrew.sections)
+    .flatMap((s) => s.books)
+    .reduce((sum, b) => sum + countReadForBook(progress, b.id), 0);
+}
+
+export function countGreekRead(progress) {
+  return Object.values(BIBLE_DATA.greek.sections)
+    .flatMap((s) => s.books)
+    .reduce((sum, b) => sum + countReadForBook(progress, b.id), 0);
+}

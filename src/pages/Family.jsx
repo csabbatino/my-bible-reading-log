@@ -137,7 +137,7 @@ export default function Family({ currentUid, familyGroup, currentProgress }) {
   );
 
   return (
-    <div style={{ paddingBottom: 16 }}>
+    <div id="tour-family" style={{ paddingBottom: 16 }}>
       <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 14, fontStyle: "italic" }}>
         {familyGroup.name} · {sortedMembers.length} members
       </div>

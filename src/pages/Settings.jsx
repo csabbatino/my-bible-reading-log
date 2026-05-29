@@ -82,7 +82,7 @@ export default function Settings({ profile, familyGroup, memberProfiles, onTheme
 
       {/* Theme picker */}
       <Divider label="My Theme" />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+      <div id="tour-themes" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
         {Object.values(THEMES).map((theme) => {
           const isActive = activeTheme === theme.id;
           const bg = theme.vars["--bg"];
@@ -146,7 +146,7 @@ export default function Settings({ profile, familyGroup, memberProfiles, onTheme
 
       {/* Notifications */}
       <Divider label="Notifications" />
-      <Card>
+      <Card id="tour-notifications">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 14, color: "var(--text)", fontWeight: 600 }}>Family Notifications</div>

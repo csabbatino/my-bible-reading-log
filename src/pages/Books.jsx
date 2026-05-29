@@ -90,7 +90,7 @@ export default function Books({ progress, onNavigate, initialTestament }) {
     : [[tab, BIBLE_DATA[tab]]];
 
   return (
-    <div style={{ paddingBottom: 16 }}>
+    <div id="tour-books-list" style={{ paddingBottom: 16 }}>
       {/* Tabs */}
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         {tabs.map((t) => (

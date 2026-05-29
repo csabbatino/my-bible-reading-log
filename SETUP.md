@@ -25,7 +25,8 @@ This is a React + Firebase web app. You'll need to:
 1. In the left sidebar, click **Build → Authentication**
 2. Click **"Get started"**
 3. Click **Google** → toggle Enable → Save
-4. Click **Apple** → toggle Enable → follow the prompts (you'll need an Apple Developer account for Apple Sign-In; Google-only is fine to start)
+4. Click **Email/Password** → toggle Enable → Save (do not enable "Email link / passwordless")
+5. Click **Apple** → toggle Enable → follow the prompts (you'll need an Apple Developer account for Apple Sign-In; Google-only is fine to start)
 
 ### Create Firestore Database
 1. In the sidebar, click **Build → Firestore Database**

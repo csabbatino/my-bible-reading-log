@@ -1,16 +1,17 @@
 import { useMemo, useState, useEffect } from "react";
-import { ProgressRing, ProgressBar, Card, Divider, Button, Badge, Avatar } from "../components/UI.jsx";
+import { ProgressRing, ProgressBar, Card, Divider, Button, Badge } from "../components/UI.jsx";
 import {
   overallPct, hebrewPct, greekPct, countReadChapters,
+  countHebrewRead, countGreekRead,
   getCurrentStreak, calculateLongestStreak, getRecentActivity,
   formatDate, getSevenDayPace,
 } from "../utils/progress.js";
 import { countChaptersThisWeek, getLongestStreak, updateLongestStreak } from "../utils/goals.js";
 import { TOTAL_CHAPTERS, HEBREW_CHAPTERS, GREEK_CHAPTERS, BOOK_MAP } from "../data/bibleData.js";
 
-function StreakCard({ streak, longestStreak, pace }) {
+function StreakCard({ streak, longestStreak, pace, tourId }) {
   return (
-    <Card style={{ marginBottom: 10 }}>
+    <Card id={tourId} style={{ marginBottom: 10 }}>
       <div style={{ display: "flex" }}>
         {/* Current streak */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0" }}>
@@ -95,7 +96,7 @@ function PaceCalculator({ progress, totalRead }) {
   );
 }
 
-function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
+function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal, tourId }) {
   const thisWeek = useMemo(() => countChaptersThisWeek(progress), [progress]);
   const pct = weeklyGoal ? Math.min(100, Math.round((thisWeek / weeklyGoal) * 100)) : 0;
   const [editing, setEditing] = useState(false);
@@ -112,7 +113,7 @@ function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
 
   if (!weeklyGoal && !editing) {
     return (
-      <Card style={{ textAlign: "center", padding: "14px" }}>
+      <Card id={tourId} style={{ textAlign: "center", padding: "14px" }}>
         <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 10 }}>Set a weekly reading goal</div>
         <Button onClick={() => setEditing(true)} small>Set Goal</Button>
       </Card>
@@ -121,7 +122,7 @@ function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
 
   if (editing) {
     return (
-      <Card>
+      <Card id={tourId}>
         <div style={{ fontSize: 13, color: "var(--text)", marginBottom: 10, fontWeight: 500 }}>Chapters per week?</div>
         <div style={{ display: "flex", gap: 8 }}>
           <input type="number" min="1" max="100" value={input}
@@ -138,7 +139,7 @@ function WeeklyGoalCard({ progress, weeklyGoal, onSetGoal }) {
   }
 
   return (
-    <Card>
+    <Card id={tourId}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700 }}>This Week</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -175,6 +176,18 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
   const streak = useMemo(() => getCurrentStreak(progress), [progress]);
   const pace = useMemo(() => getSevenDayPace(progress), [progress]);
   const recent = useMemo(() => getRecentActivity(progress, 3), [progress]);
+
+  // Derive the most recently touched book for the "currently reading" card
+  const currentBook = useMemo(() => {
+    const recentItems = getRecentActivity(progress, 1);
+    if (!recentItems.length) return null;
+    const { bookId } = recentItems[0];
+    const book = BOOK_MAP[bookId];
+    if (!book) return null;
+    const readCount = Object.keys(progress[bookId] || {}).length;
+    const pct = Math.round((readCount / book.chapters) * 100);
+    return { ...book, readCount, pct };
+  }, [progress]);
   const [longestStreak, setLongestStreak] = useState(0);
 
   // Load and update longest streak from Firebase
@@ -188,8 +201,8 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
     load();
   }, [profile?.uid, streak, progress]);
 
-  const hebrewRead = Math.round((hebrew / 100) * HEBREW_CHAPTERS);
-  const greekRead = Math.round((greek / 100) * GREEK_CHAPTERS);
+  const hebrewRead = useMemo(() => countHebrewRead(progress), [progress]);
+  const greekRead = useMemo(() => countGreekRead(progress), [progress]);
 
   const handleSetGoal = async (val) => {
     const { saveWeeklyGoal } = await import("../utils/goals.js");
@@ -212,15 +225,39 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
       </div>
 
       {/* STREAK & PACE — most prominent */}
-      <StreakCard streak={streak} longestStreak={longestStreak} pace={pace} />
+      <StreakCard streak={streak} longestStreak={longestStreak} pace={pace} tourId="tour-streak" />
 
       {/* Weekly goal */}
-      <WeeklyGoalCard progress={progress} weeklyGoal={profile?.weeklyGoal} onSetGoal={handleSetGoal} />
+      <WeeklyGoalCard progress={progress} weeklyGoal={profile?.weeklyGoal} onSetGoal={handleSetGoal} tourId="tour-goal" />
 
-      {/* Continue reading */}
-      <Button onClick={() => onNavigate("books")} style={{ width: "100%", marginBottom: 12, fontSize: 14, padding: "13px", fontWeight: 700 }}>
-        Continue Reading
-      </Button>
+      {/* Currently reading card */}
+      {currentBook ? (
+        <Card
+          id="tour-continue"
+          onClick={() => onNavigate("chapters", { bookId: currentBook.id })}
+          style={{ marginBottom: 12, cursor: "pointer" }}
+        >
+          <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 6 }}>
+            Currently Reading
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+            <div style={{ fontSize: 17, color: "var(--text)", fontWeight: 800 }}>{currentBook.name}</div>
+            <Badge color="var(--accent)">{currentBook.pct}%</Badge>
+          </div>
+          <ProgressBar pct={currentBook.pct} color="var(--accent)" height={6} />
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 5 }}>
+            {currentBook.readCount} of {currentBook.chapters} chapters · tap to continue →
+          </div>
+        </Card>
+      ) : (
+        <Card style={{ textAlign: "center", padding: "20px 16px", marginBottom: 12, cursor: "pointer" }} onClick={() => onNavigate("books")}>
+          <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 700, marginBottom: 4 }}>Ready to begin?</div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14, lineHeight: 1.5 }}>
+            Start with Genesis or jump to any book that calls to you.
+          </div>
+          <Button onClick={() => onNavigate("books")}>Start Reading</Button>
+        </Card>
+      )}
 
       {/* Bible progress rings */}
       <Card style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 18, paddingBottom: 14 }}>
@@ -239,31 +276,6 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
           <ProgressRing pct={greek} size={70} stroke={6} color="var(--greek)" label="Greek" sub={`${greekRead}/${GREEK_CHAPTERS}`} />
         </Card>
       </div>
-
-      {/* Family feed */}
-      {familyFeedItems?.length > 0 && (
-        <>
-          <Divider label="Family Activity" />
-          {familyFeedItems.slice(0, 4).map((item, i) => {
-            const book = BOOK_MAP[item.bookId];
-            const mp = memberProfiles?.[item.uid];
-            const isMe = item.uid === profile?.uid;
-            return (
-              <div key={i} onClick={() => onNavigate("chapters", { bookId: item.bookId })}
-                style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)", alignItems: "center", cursor: "pointer" }}>
-                <Avatar name={mp?.displayName || "?"} photoURL={mp?.photoURL} size={30} />
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: 13, color: isMe ? "var(--accent-light)" : "var(--text)", fontWeight: 600 }}>
-                    {isMe ? "You" : mp?.displayName?.split(" ")[0] || "Family"}{" "}
-                  </span>
-                  <span style={{ fontSize: 13, color: "var(--text-muted)" }}>read {book?.name} {item.chapter}</span>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>{formatDate(item.dateStr)}</div>
-                </div>
-              </div>
-            );
-          })}
-        </>
-      )}
 
       {/* Recent personal */}
       {recent.length > 0 && (
@@ -285,15 +297,6 @@ export default function Dashboard({ progress, profile, familyFeedItems, memberPr
         </>
       )}
 
-      {totalRead === 0 && (
-        <Card style={{ textAlign: "center", padding: "28px 16px" }}>
-          <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 700, marginBottom: 6 }}>Begin your journey</div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 18, lineHeight: 1.6 }}>
-            Track every chapter as you read through the Bible from cover to cover.
-          </div>
-          <Button onClick={() => onNavigate("books")}>Start Reading</Button>
-        </Card>
-      )}
     </div>
   );
 }

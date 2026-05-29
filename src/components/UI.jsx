@@ -52,9 +52,10 @@ export function Divider({ label }) {
 }
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
-export function Card({ children, style = {}, onClick }) {
+export function Card({ children, style = {}, onClick, id }) {
   return (
     <div
+      id={id}
       onClick={onClick}
       style={{
         background: "var(--card)", borderRadius: 14, padding: "14px",

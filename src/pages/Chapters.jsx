@@ -16,7 +16,7 @@ function BookInfoPanel({ bookId }) {
   if (!info) return null;
 
   return (
-    <div style={{
+    <div id="tour-book-info" style={{
       background: "var(--surface)", borderRadius: 12, padding: "12px 14px",
       border: "1px solid var(--border)", marginBottom: 12,
     }}>
@@ -25,7 +25,7 @@ function BookInfoPanel({ bookId }) {
           About This Book
         </div>
         {introUrl && (
-          <a href={introUrl} target="_blank" rel="noopener noreferrer"
+          <a id="tour-intro-link" href={introUrl} target="_blank" rel="noopener noreferrer"
             style={{
               fontSize: 12, color: "var(--accent)", fontWeight: 700,
               textDecoration: "underline", textUnderlineOffset: 2,
@@ -117,6 +117,7 @@ function NoteEditor({ uid, bookId, chapter, initialNote, onClose, familyNotes })
 function ChapterRow({ bookId, chapter, isRead, dateStr, note, onToggle, onDateChange, onNoteClick }) {
   const [editingDate, setEditingDate] = useState(false);
   const chapterUrl = getChapterUrl(bookId, chapter);
+  const isFirstChapter = chapter === 1;
 
   return (
     <div style={{
@@ -133,6 +134,7 @@ function ChapterRow({ bookId, chapter, isRead, dateStr, note, onToggle, onDateCh
           </span>
           {chapterUrl && (
             <a
+              id={isFirstChapter ? "tour-read-link" : undefined}
               href={chapterUrl} target="_blank" rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               style={{
@@ -162,7 +164,7 @@ function ChapterRow({ bookId, chapter, isRead, dateStr, note, onToggle, onDateCh
         )}
       </div>
       {isRead && (
-        <div onClick={onNoteClick} style={{ fontSize: 18, cursor: "pointer", opacity: note?.text ? 1 : 0.3, padding: "0 4px" }}>
+        <div id={isFirstChapter ? "tour-notes" : undefined} onClick={onNoteClick} style={{ fontSize: 18, cursor: "pointer", opacity: note?.text ? 1 : 0.3, padding: "0 4px" }}>
           {note?.text ? (note.isPublic ? "💬" : "📝") : "📝"}
         </div>
       )}
@@ -226,6 +228,20 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyGrou
     catch (e) { alert("Error updating date: " + e.message); }
   }, [uid, bookId]);
 
+  const [markAllModal, setMarkAllModal] = useState(false);
+  const [markAllDate, setMarkAllDate] = useState("");
+
+  const handleMarkAll = useCallback(async () => {
+    const dateToUse = markAllDate || todayStr();
+    const unread = Array.from({ length: book.chapters }, (_, i) => i + 1)
+      .filter((ch) => !bookProgress[ch]);
+    try {
+      await Promise.all(unread.map((ch) => markChapterRead(uid, bookId, ch, dateToUse)));
+      setMarkAllModal(false);
+      setMarkAllDate("");
+    } catch (e) { alert("Error marking chapters: " + e.message); }
+  }, [uid, bookId, bookProgress, markAllDate, book]);
+
   if (!book) return <div style={{ color: "var(--text-muted)", padding: 20 }}>Book not found</div>;
 
   const readCount = Object.keys(bookProgress).length;
@@ -252,6 +268,16 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyGrou
           <Badge color={pct === 100 ? "var(--green)" : "var(--accent)"}>{pct}%</Badge>
         </div>
         <ProgressBar pct={pct} color={pct === 100 ? "var(--green)" : "var(--accent)"} height={7} />
+        {pct < 100 && (
+          <div style={{ textAlign: "right", marginTop: 6 }}>
+            <button
+              onClick={() => { setMarkAllDate(todayStr()); setMarkAllModal(true); }}
+              style={{ background: "none", border: "none", padding: 0, fontSize: 11, color: "var(--text-muted)", cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3 }}
+            >
+              Mark all as read…
+            </button>
+          </div>
+        )}
       </div>
 
       <BookInfoPanel bookId={bookId} />
@@ -292,6 +318,27 @@ export default function Chapters({ uid, bookId, progress, onNavigate, familyGrou
       {newBadges.length > 0 && (
         <BadgeCelebration badges={newBadges} onDone={() => setNewBadges([])} />
       )}
+
+      <Modal isOpen={markAllModal} onClose={() => setMarkAllModal(false)} title={`Mark all — ${book.name}`}>
+        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16, lineHeight: 1.6 }}>
+          When did you finish {book.name}? This date will be applied to all{" "}
+          {book.chapters - readCount} unread chapter{book.chapters - readCount !== 1 ? "s" : ""}.
+          Chapters you've already marked will not be changed.
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>Date read</div>
+          <input
+            type="date"
+            value={markAllDate}
+            onChange={(e) => setMarkAllDate(e.target.value)}
+            style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 8, background: "var(--bg)", border: "1px solid var(--accent)", color: "var(--text)", fontSize: 14, outline: "none" }}
+          />
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Button variant="ghost" onClick={() => setMarkAllModal(false)} style={{ flex: 1 }}>Cancel</Button>
+          <Button onClick={handleMarkAll} style={{ flex: 1 }}>Mark all</Button>
+        </div>
+      </Modal>
     </div>
   );
 }

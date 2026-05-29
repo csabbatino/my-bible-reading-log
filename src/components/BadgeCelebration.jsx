@@ -76,7 +76,7 @@ export default function BadgeCelebration({ badges, onDone }) {
             width: "100%",
           }}
         >
-          {isLast ? (isBibleComplete ? "Praise God! 🙏" : "Thank You!") : "Next →"}
+          {isLast ? "Keep going!" : "Next →"}
         </button>
       </div>
 
