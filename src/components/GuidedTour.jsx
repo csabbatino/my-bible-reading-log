@@ -2,35 +2,44 @@ import { useState, useEffect, useCallback } from "react";
 import { markTourCompleted } from "../utils/goals.js";
 
 const TOUR_STEPS = [
-  { id: "streak",        screen: "dashboard", targetId: "tour-streak",        title: "Streak & Pace",         tip: "Build a daily reading habit and track your pace over the last 7 days." },
-  { id: "goal",          screen: "dashboard", targetId: "tour-goal",           title: "Weekly Goal",           tip: "Set a weekly chapter goal and the app tracks your progress Monday through Sunday." },
-  { id: "continue",      screen: "dashboard", targetId: "tour-continue",       title: "Currently Reading",     tip: "Picks up where you left off — shows your active book and how far you've come." },
+  { id: "streak",        screen: "dashboard", targetId: "tour-streak",        title: "Streak & Pace",         tip: "Build a daily reading habit and track your pace over the last 7 days.", clampHeight: false },
+  { id: "goal",          screen: "dashboard", targetId: "tour-goal",           title: "Weekly Goal",           tip: "Set a weekly chapter goal and the app tracks your progress Monday through Sunday.", clampHeight: false },
+  { id: "continue",      screen: "dashboard", targetId: "tour-continue",       title: "Currently Reading",     tip: "Picks up where you left off — shows your active book and how far you've come.", clampHeight: false },
   { id: "books",         screen: "books",     targetId: "tour-books-list",     title: "Books",                 tip: "Browse all books organised by section — tap any book to see its chapters.", clampHeight: true },
-  { id: "aboutbook",     screen: "chapters",  targetId: "tour-book-info",      title: "About This Book",       tip: "Each book shows its writer, location, and time period covered." },
-  { id: "intro",         screen: "chapters",  targetId: "tour-intro-link",     title: "Introduction Link",     tip: "Tap to watch the book's introduction video on JW.org." },
-  { id: "readlink",      screen: "chapters",  targetId: "tour-read-link",      title: "Read on JW.org",        tip: "Opens that chapter directly on JW.org in a new tab." },
-  { id: "notes",         screen: "chapters",  targetId: "tour-notes",          title: "Chapter Notes",         tip: "Tap the 📝 icon on any read chapter to jot down personal reflections — private by default, shareable with family." },
+  { id: "aboutbook",     screen: "chapters",  targetId: "tour-book-info",      title: "About This Book",       tip: "Each book shows its writer, location, and time period covered.", clampHeight: false },
+  { id: "intro",         screen: "chapters",  targetId: "tour-intro-link",     title: "Introduction Link",     tip: "Tap to watch the book's introduction video on JW.org.", clampHeight: false },
+  { id: "readlink",      screen: "chapters",  targetId: "tour-read-link",      title: "Read on JW.org",        tip: "Opens that chapter directly on JW.org in a new tab.", clampHeight: false },
+  { id: "notes",         screen: "chapters",  targetId: "tour-notes",          title: "Chapter Notes",         tip: "Tap the 📝 icon on any read chapter to jot down personal reflections — private by default, shareable with family.", clampHeight: false },
   { id: "family",        screen: "family",    targetId: "tour-family",         title: "Family Tab",            tip: "See your family's streaks, pace, and progress side by side.", clampHeight: true },
-  { id: "themes",        screen: "settings",  targetId: "tour-themes",         title: "Themes",                tip: "Each family member can choose their own colour theme." },
-  { id: "notifications", screen: "settings",  targetId: "tour-notifications",  title: "Notifications",         tip: "Enable push notifications for book completions and streak milestones." },
+  { id: "themes",        screen: "settings",  targetId: "tour-themes",         title: "Themes",                tip: "Each family member can choose their own colour theme.", clampHeight: false },
+  { id: "notifications", screen: "settings",  targetId: "tour-notifications",  title: "Notifications",         tip: "Enable push notifications for book completions and streak milestones.", clampHeight: false },
 ];
 
 const DEMO_BOOK_ID = "gen";
 const PAD = 7;
-// Height of the fixed tour card + its bottom offset + breathing room
-const TOUR_CARD_HEIGHT = 220;
-const TOUR_CARD_BOTTOM = 90;
-const TOUR_CARD_TOP = () => window.innerHeight - TOUR_CARD_BOTTOM - TOUR_CARD_HEIGHT;
+const TOUR_CARD_APPROX_HEIGHT = 210; // px — approximate height of the tour card
+const TOUR_CARD_BOTTOM_OFFSET = 90; // px from viewport bottom
 
-export default function GuidedTour({ uid, currentPage, onNavigate, onComplete }) {
+export default function GuidedTour({ uid, currentPage, onNavigate, onComplete, scrollContainerId, headerId }) {
   const [stepIndex, setStepIndex] = useState(0);
-  const [sl, setSl] = useState(null); // final clamped spotlight rect (viewport-fixed)
+  const [sl, setSl] = useState(null);
 
   const step = TOUR_STEPS[stepIndex];
   const isLast = stepIndex === TOUR_STEPS.length - 1;
   const progressPct = Math.round(((stepIndex + 1) / TOUR_STEPS.length) * 100);
 
-  // Navigate to correct screen when step changes
+  // Get the scrollable content div (not window)
+  const getScrollEl = useCallback(() =>
+    scrollContainerId ? document.getElementById(scrollContainerId) : null,
+  [scrollContainerId]);
+
+  // Get header height so we never place the spotlight under the sticky bar
+  const getHeaderHeight = useCallback(() => {
+    const el = headerId ? document.getElementById(headerId) : null;
+    return el ? el.getBoundingClientRect().height : 0;
+  }, [headerId]);
+
+  // Navigate to correct screen
   useEffect(() => {
     if (step.screen === "chapters" && currentPage !== "chapters") {
       onNavigate("chapters", { bookId: DEMO_BOOK_ID });
@@ -39,48 +48,52 @@ export default function GuidedTour({ uid, currentPage, onNavigate, onComplete })
     }
   }, [stepIndex]);
 
-  const measureAndSet = useCallback(() => {
+  const measure = useCallback(() => {
     const el = document.getElementById(step.targetId);
     if (!el) return false;
 
+    const headerH = getHeaderHeight();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    // Raw viewport rect
+    // Viewport-relative rect
     const r = el.getBoundingClientRect();
+
+    // If element top is hidden behind header, scroll it into view first
+    const scrollEl = getScrollEl();
+    if (r.top < headerH + 8 && scrollEl) {
+      scrollEl.scrollTop += r.top - headerH - 16;
+      return false; // re-measure after scroll
+    }
 
     let top    = r.top    - PAD;
     let left   = r.left   - PAD;
     let width  = r.width  + PAD * 2;
     let height = r.height + PAD * 2;
 
-    // Clamp to viewport bounds (handles full-page containers on mobile)
-    top    = Math.max(0, top);
-    left   = Math.max(0, left);
-    width  = Math.min(width,  vw - left);
-    height = Math.min(height, vh - top);
-
-    // If step.clampHeight, only show the visible top portion of the element
-    // rather than letting it extend behind the tour card
-    if (step.clampHeight) {
-      const maxBottom = TOUR_CARD_TOP() - 16; // 16px gap above the card
-      height = Math.min(height, maxBottom - top);
+    // Never overlap the sticky header
+    if (top < headerH) {
+      const diff = headerH - top;
+      top += diff;
+      height = Math.max(0, height - diff);
     }
 
-    // If the spotlight bottom would overlap the tour card, scroll the element
-    // upward so there's room. Re-measure once after scrolling.
-    const slBottom = top + height;
-    const cardTop = TOUR_CARD_TOP();
-    if (slBottom > cardTop - 16) {
-      // Scroll element so its bottom sits above the card
-      const needed = slBottom - (cardTop - 32);
-      window.scrollBy({ top: needed, behavior: "smooth" });
-      return false; // will re-measure on next attempt
+    // Clamp to viewport width
+    left  = Math.max(0, left);
+    width = Math.min(width, vw - left);
+
+    // For full-page containers (clampHeight), cap height so it doesn't run
+    // off-screen or behind the tour card
+    const tourCardTop = vh - TOUR_CARD_BOTTOM_OFFSET - TOUR_CARD_APPROX_HEIGHT;
+    if (step.clampHeight || top + height > tourCardTop - 16) {
+      height = Math.min(height, tourCardTop - top - 16);
     }
+
+    height = Math.max(0, height);
 
     setSl({ top, left, width, height });
     return true;
-  }, [step]);
+  }, [step, getHeaderHeight, getScrollEl]);
 
   useEffect(() => {
     setSl(null);
@@ -91,15 +104,25 @@ export default function GuidedTour({ uid, currentPage, onNavigate, onComplete })
       if (cancelled) return;
       const el = document.getElementById(step.targetId);
       if (el) {
-        // First scroll into view
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        // Wait for scroll to settle, then measure (and possibly re-scroll once)
+        // Scroll the element into view via the scroll container
+        const scrollEl = getScrollEl();
+        const headerH = getHeaderHeight();
+        if (scrollEl) {
+          const r = el.getBoundingClientRect();
+          const containerRect = scrollEl.getBoundingClientRect();
+          // Scroll so the element top sits ~24px below the header
+          const targetScrollTop = scrollEl.scrollTop + r.top - containerRect.top - headerH - 24;
+          scrollEl.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+        } else {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        // Measure after scroll settles
         setTimeout(() => {
           if (cancelled) return;
-          const done = measureAndSet();
-          if (!done) {
-            // One re-measure after the corrective scroll
-            setTimeout(() => { if (!cancelled) measureAndSet(); }, 400);
+          const ok = measure();
+          if (!ok) {
+            // One corrective re-measure
+            setTimeout(() => { if (!cancelled) measure(); }, 380);
           }
         }, 420);
       } else if (attempts < 14) {
@@ -110,7 +133,7 @@ export default function GuidedTour({ uid, currentPage, onNavigate, onComplete })
 
     tryFind();
     return () => { cancelled = true; };
-  }, [stepIndex, currentPage, measureAndSet]);
+  }, [stepIndex, currentPage, measure, getScrollEl, getHeaderHeight]);
 
   const handleNext = async () => {
     if (isLast) { await markTourCompleted(uid); onComplete(); }
@@ -118,15 +141,15 @@ export default function GuidedTour({ uid, currentPage, onNavigate, onComplete })
   };
   const handleSkip = async () => { await markTourCompleted(uid); onComplete(); };
 
-  const vw = typeof window !== "undefined" ? window.innerWidth : 390;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 844;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
 
-  // Four dark panels that frame the spotlight hole
+  // Four dark panels surrounding the spotlight hole
   const panels = sl ? [
-    { top: 0,              left: 0,              width: vw,                    height: sl.top },
-    { top: sl.top + sl.height, left: 0,          width: vw,                    height: vh - sl.top - sl.height },
-    { top: sl.top,         left: 0,              width: sl.left,               height: sl.height },
-    { top: sl.top,         left: sl.left + sl.width, width: vw - sl.left - sl.width, height: sl.height },
+    { top: 0,                left: 0,                  width: vw,                         height: sl.top                         },
+    { top: sl.top + sl.height, left: 0,                width: vw,                         height: vh - sl.top - sl.height        },
+    { top: sl.top,           left: 0,                  width: sl.left,                    height: sl.height                      },
+    { top: sl.top,           left: sl.left + sl.width, width: vw - sl.left - sl.width,    height: sl.height                      },
   ] : [
     { top: 0, left: 0, width: vw, height: vh },
   ];
@@ -146,7 +169,7 @@ export default function GuidedTour({ uid, currentPage, onNavigate, onComplete })
         }} onClick={(e) => e.stopPropagation()} />
       ))}
 
-      {/* White border ring around the spotlight */}
+      {/* White border ring around spotlight */}
       {sl && (
         <div style={{
           position: "fixed",
@@ -161,10 +184,10 @@ export default function GuidedTour({ uid, currentPage, onNavigate, onComplete })
         }} />
       )}
 
-      {/* Tour card */}
+      {/* Tour card — fixed above the bottom nav */}
       <div style={{
         position: "fixed",
-        bottom: TOUR_CARD_BOTTOM,
+        bottom: TOUR_CARD_BOTTOM_OFFSET,
         left: 16, right: 16,
         zIndex: 402,
         pointerEvents: "auto",
@@ -174,16 +197,16 @@ export default function GuidedTour({ uid, currentPage, onNavigate, onComplete })
           border: "1px solid var(--border)",
           boxShadow: "0 -4px 40px rgba(0,0,0,0.5)",
         }}>
-          <div style={{ height: 3, background: "var(--border)", borderRadius: 2, marginBottom: 16, overflow: "hidden" }}>
+          <div style={{ height: 3, background: "var(--border)", borderRadius: 2, marginBottom: 14, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${progressPct}%`, background: "var(--accent)", borderRadius: 2, transition: "width 0.3s ease" }} />
           </div>
-          <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>
             {stepIndex + 1} of {TOUR_STEPS.length}
           </div>
-          <div style={{ fontSize: 18, color: "var(--accent-light)", fontWeight: 800, marginBottom: 6, letterSpacing: "-0.3px" }}>
+          <div style={{ fontSize: 17, color: "var(--accent-light)", fontWeight: 800, marginBottom: 5, letterSpacing: "-0.3px" }}>
             {step.title}
           </div>
-          <div style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.6, marginBottom: 20 }}>
+          <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, marginBottom: 18 }}>
             {step.tip}
           </div>
           <div style={{ display: "flex", gap: 10 }}>

@@ -32,7 +32,7 @@ export const THEMES = {
       "--text-muted": "#c05010",
       "--green": "#3a7a30",
       "--green-light": "#5a9a50",
-      "--border": "#f0a050",
+      "--border": "#f8c898",
       "--hebrew": "#7055b0",
       "--greek": "#1565c0",
       "--danger": "#d32f2f",

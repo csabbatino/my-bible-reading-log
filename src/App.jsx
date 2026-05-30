@@ -198,7 +198,7 @@ export default function App() {
       fontFamily: "'Nunito', system-ui, -apple-system, sans-serif",
     }}>
       {/* Top bar */}
-      <div style={{
+      <div id="app-topbar" style={{
         position: "sticky", top: 0, zIndex: 100,
         background: "var(--nav-bg)", borderBottom: "1px solid var(--border)",
         padding: "10px 16px 10px",
@@ -212,14 +212,19 @@ export default function App() {
               <BackIcon size={20} />
             </button>
           )}
-          <h1 style={{ margin: 0, fontSize: 18, color: "var(--text)", fontWeight: 600, letterSpacing: "-0.3px" }}>
+          <h1 style={{ margin: 0, fontSize: 18, color: "var(--text)", fontWeight: 600, letterSpacing: "-0.3px", flex: 1 }}>
             {pageTitles[currentPage]}
           </h1>
+          {currentPage === "dashboard" && profile?.displayName && (
+            <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
+              Welcome back, {profile.displayName.split(" ")[0]}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Page content */}
-      <div style={{ flex: 1, padding: "16px 16px 0", overflowY: "auto" }}>
+      <div id="scroll-container" style={{ flex: 1, padding: "16px 16px 0", overflowY: "auto" }}>
         {currentPage === "dashboard" && (
           <Dashboard
             progress={progress} profile={profile}
@@ -309,6 +314,8 @@ export default function App() {
           currentPage={currentPage}
           onNavigate={navigate}
           onComplete={() => setShowTour(false)}
+          scrollContainerId="scroll-container"
+          headerId="app-topbar"
         />
       )}
 
